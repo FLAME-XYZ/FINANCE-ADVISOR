@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="FLAME FINANCE ADVANCED" />
+  <title>FLAME FINANCE ADVANCED</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <link rel="icon" type="image/png" href="logoku.png">
+
+  <!-- Global Styles -->
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- TradingView Lightweight Charts -->
+  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body class="dark-mode">
+
+  <!-- ══════════════════════════════════════════════════
+       APP LAYOUT WRAPPER
+  ══════════════════════════════════════════════════ -->
+  <div class="app-layout" id="app-layout">
+
+    <!-- ══════════════════════
+         SIDEBAR KIRI
+    ══════════════════════ -->
+    <aside class="sidebar" id="sidebar">
+
+      <!-- Logo & Branding — tombol panah dihapus -->
+      <div class="sidebar-header">
+        <div class="logo-wrap">
+          <div class="logo-icon">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <path d="M4 20 L9 13 L14 16 L20 7 L24 10" stroke="var(--accent-green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="24" cy="10" r="2.5" fill="var(--accent-green)"/>
+              <path d="M2 24 H26" stroke="var(--border-color)" stroke-width="1"/>
+            </svg>
+          </div>
+          <div class="logo-text">
+            <span class="logo-name">FLAME FINANCE</span>
+            <span class="logo-sub">ADVISOR</span>
+          </div>
+        </div>
+        <!-- Tombol panah sidebar DIHAPUS — tutup sidebar dengan klik di luar -->
+      </div>
+
+      <!-- Navigation Menu -->
+      <nav class="sidebar-nav" id="sidebar-nav">
+        <div class="nav-section-label">MENU</div>
+        <a class="nav-item active" data-page="dashboard" onclick="loadPage('dashboard')" href="#dashboard" title="Dashboard">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="11" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="1" y="11" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="11" y="11" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+          </span>
+          <span class="nav-label">Dashboard</span>
+          <span class="nav-badge" id="nav-badge-dashboard"></span>
+        </a>
+        <a class="nav-item" data-page="chart" onclick="loadPage('chart')" href="#chart" title="Chart & Indicators">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <polyline points="1,14 5,9 9,11 13,5 17,7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="1" y1="17" x2="17" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="nav-label">Chart & Indicators</span>
+        </a>
+        <a class="nav-item" data-page="analysis" onclick="loadPage('analysis')" href="#analysis" title="Analysis">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.5"/>
+              <line x1="9" y1="1.5" x2="9" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="9" y1="9" x2="14" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <circle cx="9" cy="9" r="1.5" fill="currentColor"/>
+            </svg>
+          </span>
+          <span class="nav-label">Analysis</span>
+        </a>
+        <a class="nav-item" data-page="calculator" onclick="loadPage('calculator')" href="#calculator" title="Calculator">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect x="2" y="1.5" width="14" height="15" rx="2" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="4.5" y="4" width="9" height="2.5" rx="1" stroke="currentColor" stroke-width="1.2"/>
+              <circle cx="5.5" cy="10" r="1" fill="currentColor"/>
+              <circle cx="9" cy="10" r="1" fill="currentColor"/>
+              <circle cx="12.5" cy="10" r="1" fill="currentColor"/>
+              <circle cx="5.5" cy="13.5" r="1" fill="currentColor"/>
+              <circle cx="9" cy="13.5" r="1" fill="currentColor"/>
+              <circle cx="12.5" cy="13.5" r="1" fill="var(--accent-green)"/>
+            </svg>
+          </span>
+          <span class="nav-label">Calculator</span>
+        </a>
+        <a class="nav-item" data-page="news" onclick="loadPage('news')" href="#news" title="News & Calendar">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect x="1.5" y="3" width="15" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+              <line x1="1.5" y1="7" x2="16.5" y2="7" stroke="currentColor" stroke-width="1.2"/>
+              <line x1="5" y1="3" x2="5" y2="1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="13" y1="3" x2="13" y2="1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <rect x="4" y="10" width="3" height="2" rx="0.5" fill="currentColor" opacity="0.6"/>
+              <rect x="9.5" y="10" width="3" height="2" rx="0.5" fill="var(--accent-red)" opacity="0.8"/>
+            </svg>
+          </span>
+          <span class="nav-label">News & Calendar</span>
+          <span class="nav-badge live" id="nav-badge-news">LIVE</span>
+        </a>
+        <a class="nav-item" data-page="screener" onclick="loadPage('screener')" href="#screener" title="Screener">
+          <span class="nav-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" stroke-width="1.5"/>
+              <line x1="11.5" y1="11.5" x2="16.5" y2="16.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="5.5" y1="7.5" x2="9.5" y2="7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="7.5" y1="5.5" x2="7.5" y2="9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="nav-label">Screener</span>
+        </a>
+      </nav>
+
+      <!-- Market Session Display -->
+      <div class="session-widget" id="session-widget">
+        <div class="session-label">MARKET SESSIONS</div>
+        <div class="session-list">
+          <div class="session-item" id="session-sydney">
+            <span class="session-dot"></span>
+            <span class="session-name">Sydney</span>
+            <span class="session-time">00:00–06:00</span>
+          </div>
+          <div class="session-item" id="session-tokyo">
+            <span class="session-dot"></span>
+            <span class="session-name">Tokyo</span>
+            <span class="session-time">00:00–09:00</span>
+          </div>
+          <div class="session-item" id="session-london">
+            <span class="session-dot"></span>
+            <span class="session-name">London</span>
+            <span class="session-time">07:00–16:00</span>
+          </div>
+          <div class="session-item" id="session-newyork">
+            <span class="session-dot"></span>
+            <span class="session-name">New York</span>
+            <span class="session-time">13:00–22:00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <button class="dark-mode-toggle" id="dark-mode-toggle" onclick="window.UI && window.UI.toggleDarkMode()" title="Toggle dark/light mode">
+          <svg class="icon-dark" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 1C4.13 1 1 4.13 1 8C1 11.87 4.13 15 8 15C11.87 15 15 11.87 15 8C15 4.13 11.87 1 8 1ZM8 13.5C4.96 13.5 2.5 11.04 2.5 8C2.5 4.96 4.96 2.5 8 2.5V13.5Z" fill="currentColor"/>
+          </svg>
+          <svg class="icon-light" width="16" height="16" viewBox="0 0 16 16" fill="none" style="display:none">
+            <circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="8" y1="1" x2="8" y2="2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="8" y1="13.5" x2="8" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="1" y1="8" x2="2.5" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="13.5" y1="8" x2="15" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span class="dm-label">Dark Mode</span>
+        </button>
+        <div class="sidebar-version">v3.0.0 · ProTrader</div>
+      </div>
+
+    </aside><!-- /sidebar -->
+
+    <!-- ══════════════════════
+         TOPBAR
+    ══════════════════════ -->
+    <header class="topbar" id="topbar">
+
+      <!-- Hamburger (mobile) -->
+      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobileSidebar()" title="Menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <!-- Ticker Tape -->
+      <div class="ticker-wrap" id="ticker-wrap">
+        <div class="ticker-tape" id="ticker-tape">
+          <span class="ticker-loading">Memuat data pasar...</span>
+        </div>
+      </div>
+
+      <!-- Right Controls -->
+      <div class="topbar-right">
+        <!-- Clock -->
+        <div class="clock-wrap" id="clock-wrap">
+          <div class="clock-utc">
+            <span class="clock-label">UTC</span>
+            <span class="clock-time" id="clock-utc">--:--:--</span>
+          </div>
+          <div class="clock-divider">|</div>
+          <div class="clock-wib">
+            <span class="clock-label">WIB</span>
+            <span class="clock-time" id="clock-wib">--:--:--</span>
+          </div>
+        </div>
+
+        <!-- Notification Bell -->
+        <button class="notif-btn" id="notif-btn" onclick="toggleNotifPanel()" title="Notifikasi">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M9 2C6.24 2 4 4.24 4 7V11.5L2.5 13H15.5L14 11.5V7C14 4.24 11.76 2 9 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M7 14C7 15.1 7.9 16 9 16C10.1 16 11 15.1 11 14" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+          <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+        </button>
+
+        <!-- Notification Panel -->
+        <div class="notif-panel" id="notif-panel" style="display:none">
+          <div class="notif-header">
+            <span>Notifikasi</span>
+            <button onclick="clearAllNotifs()">Hapus semua</button>
+          </div>
+          <div class="notif-list" id="notif-list">
+            <div class="notif-empty">Belum ada notifikasi</div>
+          </div>
+        </div>
+      </div>
+
+    </header><!-- /topbar -->
+
+    <!-- ══════════════════════
+         MAIN CONTENT AREA
+    ══════════════════════ -->
+    <main class="main-content" id="main-content">
+      <!-- Konten halaman di-inject di sini via loadPage() -->
+      <div class="skeleton-page">
+        <div class="skeleton-header"></div>
+        <div class="skeleton-row">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
+        <div class="skeleton-row">
+          <div class="skeleton-card tall"></div>
+          <div class="skeleton-card tall"></div>
+        </div>
+      </div>
+    </main><!-- /main-content -->
+
+  </div><!-- /app-layout -->
+
+  <!-- ══════════════════════
+       MOBILE OVERLAY — klik di mana saja untuk tutup sidebar
+  ══════════════════════ -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeMobileSidebar()"></div>
+
+  <!-- Toast container DIHAPUS — tidak pakai toast -->
+
+  <!-- ══════════════════════
+       SCRIPTS — URUTAN PENTING
+  ══════════════════════ -->
+  <script src="js/config.js"></script>    <!-- 1. Konstanta & AppState -->
+  <script src="js/api.js"></script>       <!-- 2. Fetch API & AppInit -->
+  <script src="js/indicators.js"></script><!-- 3. Kalkulasi indikator -->
+  <script src="js/signals.js"></script>   <!-- 4. Confluence & signals -->
+  <script src="js/analysis.js"></script>  <!-- 5. SMC, ICT, Fib dll -->
+  <script src="js/chart.js"></script>     <!-- 6. TradingView chart setup -->
+  <script src="js/ui.js"></script>        <!-- 7. UI utilities (TERAKHIR) -->
+
+  <!-- ══════════════════════
+       SPA ROUTER + APP INIT
+  ══════════════════════ -->
+  <script>
+  // ═══════════════════════════════════════
+  // SPA ROUTER — loadPage(pageName)
+  // Menggunakan loading skeleton refresh (bukan toast)
+  // ═══════════════════════════════════════
+  window.loadPage = async function(pageName) {
+    const container = document.getElementById('main-content');
+
+    // Tampilkan skeleton loading
+    container.innerHTML = `
+      <div class="skeleton-page">
+        <div class="skeleton-header"></div>
+        <div class="skeleton-row">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
+        <div class="skeleton-row">
+          <div class="skeleton-card tall"></div>
+          <div class="skeleton-card tall"></div>
+        </div>
+      </div>`;
+
+    try {
+      const response = await fetch(`pages/${pageName}.html`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const html = await response.text();
+      container.innerHTML = html;
+
+      // Jalankan semua <script> yang ada di dalam konten halaman
+      container.querySelectorAll('script').forEach(oldScript => {
+        const newScript = document.createElement('script');
+        newScript.textContent = oldScript.textContent;
+        Array.from(oldScript.attributes).forEach(attr => {
+          newScript.setAttribute(attr.name, attr.value);
+        });
+        document.body.appendChild(newScript);
+        oldScript.remove();
+      });
+
+      // Update active state di sidebar
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      const activeNavItem = document.querySelector(`.nav-item[data-page="${pageName}"]`);
+      if (activeNavItem) activeNavItem.classList.add('active');
+
+      // Update AppState
+      if (window.AppState) {
+        window.AppState.currentPage = pageName;
+      }
+
+      // Update URL hash (tanpa reload)
+      history.replaceState(null, '', `#${pageName}`);
+
+      // Scroll ke atas
+      container.scrollTop = 0;
+
+    } catch (err) {
+      console.error(`[Router] Gagal memuat halaman "${pageName}":`, err);
+      container.innerHTML = `
+        <div class="error-state">
+          <div class="error-icon">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <circle cx="24" cy="24" r="22" stroke="var(--accent-red)" stroke-width="2"/>
+              <line x1="24" y1="14" x2="24" y2="26" stroke="var(--accent-red)" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="24" cy="33" r="2" fill="var(--accent-red)"/>
+            </svg>
+          </div>
+          <h3 class="error-title">Gagal Memuat Halaman</h3>
+          <p class="error-msg">Apa Lu <code>Malas Ngoding</code> Untuk Fitur Ini</p>
+          <p class="error-detail">${err.message}</p>
+          <button class="btn-primary" onclick="loadPage('${pageName}')">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="margin-right:6px">
+              <path d="M12 7A5 5 0 1 1 7 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <polyline points="7,2 10,2 10,5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Silahkan Minggat Anda Sering MC Jadi Tidak perlu Fitur Ini
+          </button>
+        </div>`;
+      // Tidak menampilkan toast error — error sudah tampil di konten halaman
+    }
+
+    // Tutup sidebar di mobile setelah navigasi
+    if (window.innerWidth <= 768) {
+      closeMobileSidebar();
+    }
+  };
+
+  // ═══════════════════════════════════════
+  // SIDEBAR MOBILE — tutup dengan klik area mana saja
+  // Tombol panah DIHAPUS — hanya overlay yang menutup
+  // ═══════════════════════════════════════
+  // Flag untuk mencegah sidebar langsung tertutup saat baru dibuka
+  let _sidebarJustOpened = false;
+
+  window.toggleMobileSidebar = function() {
+    const sidebar  = document.getElementById('sidebar');
+    const overlay  = document.getElementById('sidebar-overlay');
+    const isOpen   = sidebar.classList.contains('open');
+    if (isOpen) {
+      closeMobileSidebar();
+    } else {
+      sidebar.classList.add('open');
+      overlay.classList.add('visible');
+      document.body.style.overflow = 'hidden';
+      // Set flag agar event click yang sama tidak langsung menutup sidebar
+      _sidebarJustOpened = true;
+      setTimeout(() => { _sidebarJustOpened = false; }, 50);
+    }
+  };
+
+  window.closeMobileSidebar = function() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (!sidebar || !overlay) return;
+    sidebar.classList.remove('open');
+    overlay.classList.remove('visible');
+    document.body.style.overflow = '';
+  };
+
+  // Klik di luar sidebar (main-content) juga menutup sidebar di mobile
+  document.addEventListener('click', function(e) {
+    if (_sidebarJustOpened) return; // Abaikan click yang sama saat toggle
+    const sidebar = document.getElementById('sidebar');
+    const hamburger = document.getElementById('hamburger-btn');
+    if (!sidebar) return;
+    if (sidebar.classList.contains('open')) {
+      // Jika klik di luar sidebar dan bukan tombol hamburger
+      if (!sidebar.contains(e.target) && (!hamburger || !hamburger.contains(e.target))) {
+        closeMobileSidebar();
+      }
+    }
+  });
+
+  // ═══════════════════════════════════════
+  // CLOCK — UTC & WIB (GMT+7)
+  // ═══════════════════════════════════════
+  function startClock() {
+    function tick() {
+      const now     = new Date();
+      const utcH    = String(now.getUTCHours()).padStart(2,'0');
+      const utcM    = String(now.getUTCMinutes()).padStart(2,'0');
+      const utcS    = String(now.getUTCSeconds()).padStart(2,'0');
+      const wibMs   = now.getTime() + (7 * 3600000);
+      const wib     = new Date(wibMs);
+      const wibH    = String(wib.getUTCHours()).padStart(2,'0');
+      const wibM    = String(wib.getUTCMinutes()).padStart(2,'0');
+      const wibS    = String(wib.getUTCSeconds()).padStart(2,'0');
+
+      const elUTC = document.getElementById('clock-utc');
+      const elWIB = document.getElementById('clock-wib');
+      if (elUTC) elUTC.textContent = `${utcH}:${utcM}:${utcS}`;
+      if (elWIB) elWIB.textContent = `${wibH}:${wibM}:${wibS}`;
+    }
+    tick();
+    setInterval(tick, 1000);
+  }
+
+  // ═══════════════════════════════════════
+  // NOTIFICATION PANEL
+  // ═══════════════════════════════════════
+  window._notifications = [];
+
+  window.toggleNotifPanel = function() {
+    const panel = document.getElementById('notif-panel');
+    if (panel) {
+      const isVisible = panel.style.display !== 'none';
+      panel.style.display = isVisible ? 'none' : 'block';
+      if (!isVisible) {
+        const badge = document.getElementById('notif-badge');
+        if (badge) badge.style.display = 'none';
+      }
+    }
+  };
+
+  window.addNotification = function(msg, type='info') {
+    const notif = { msg, type, time: new Date() };
+    window._notifications.unshift(notif);
+    if (window._notifications.length > 20) window._notifications.pop();
+
+    const badge = document.getElementById('notif-badge');
+    if (badge) {
+      badge.style.display = 'flex';
+      badge.textContent   = window._notifications.length > 9 ? '9+' : window._notifications.length;
+    }
+    renderNotifList();
+    // Tidak ada toast popup — hanya masuk ke panel notifikasi
+  };
+
+  window.clearAllNotifs = function() {
+    window._notifications = [];
+    const badge = document.getElementById('notif-badge');
+    if (badge) badge.style.display = 'none';
+    renderNotifList();
+  };
+
+  function renderNotifList() {
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+
+    if (window._notifications.length === 0) {
+      list.innerHTML = '<div class="notif-empty">Belum ada notifikasi</div>';
+      return;
+    }
+    list.innerHTML = window._notifications.map(n => {
+      const mins = Math.floor((Date.now() - n.time.getTime()) / 60000);
+      const timeStr = mins < 1 ? 'Baru saja' : `${mins} menit lalu`;
+      return `<div class="notif-item notif-${n.type}">
+        <span class="notif-msg">${n.msg}</span>
+        <span class="notif-time">${timeStr}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Tutup notif panel saat klik di luar
+  document.addEventListener('click', function(e) {
+    const panel = document.getElementById('notif-panel');
+    const btn   = document.getElementById('notif-btn');
+    if (panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
+      panel.style.display = 'none';
+    }
+  });
+
+  // ═══════════════════════════════════════
+  // TICKER TAPE — Update dari AppState.prices
+  // Mendukung: Crypto (BTCUSDT), Metals (XAUTUSDT), Forex (EURUSD)
+  // ═══════════════════════════════════════
+  window.updateTickerTape = function(prices) {
+    const tape = document.getElementById('ticker-tape');
+    if (!tape || !prices) return;
+
+    let symbols;
+    const cfgTicker = window.CONFIG && window.CONFIG.TICKER_SYMBOLS;
+    if (cfgTicker && cfgTicker.length) {
+      symbols = cfgTicker.filter(sym => prices[sym]);
+      Object.keys(prices).forEach(sym => {
+        if (!symbols.includes(sym)) symbols.push(sym);
+      });
+    } else {
+      symbols = Object.keys(prices);
+    }
+    symbols = symbols.slice(0, 12);
+    if (symbols.length === 0) return;
+
+    const items = symbols.map(sym => {
+      const d = prices[sym];
+      if (!d || d.price == null) return '';
+      const up    = parseFloat(d.changePct) >= 0;
+      const cls   = up ? 'ticker-up' : 'ticker-down';
+      const arrow = up ? '▲' : '▼';
+      const pct   = Math.abs(parseFloat(d.changePct)).toFixed(2);
+      const price = parseFloat(d.price);
+
+      let priceStr;
+      if (d.assetClass === 'forex') {
+        priceStr = price.toFixed(d.decimals || 5);
+      } else if (d.assetClass === 'metals' || d.assetClass === 'commodities') {
+        priceStr = price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      } else {
+        if (price >= 1000)   priceStr = price.toLocaleString('en-US', { maximumFractionDigits: 2 });
+        else if (price >= 1) priceStr = price.toFixed(3);
+        else                 priceStr = price.toFixed(5);
+      }
+
+      // Tidak ada badge (Est.) — semua dari Binance nyata
+      return `<span class="ticker-item ${cls}">
+        <span class="ticker-sym">${d.display || sym}</span>
+        <span class="ticker-price">${priceStr}</span>
+        <span class="ticker-chg">${arrow} ${pct}%</span>
+      </span><span class="ticker-sep">·</span>`;
+    }).filter(Boolean).join('');
+
+    if (items) tape.innerHTML = items + items; // duplikat untuk infinite scroll
+  };
+
+  // ═══════════════════════════════════════
+  // FOREX HEATMAP — Render dari AppState.prices (forex only)
+  // ═══════════════════════════════════════
+  window.renderForexHeatmap = function() {
+    const heatmapEl = document.getElementById('forex-heatmap') ||
+                      document.querySelector('.forex-heatmap') ||
+                      document.querySelector('[data-heatmap="forex"]');
+    if (!heatmapEl) return;
+
+    const prices = window.AppState && window.AppState.prices;
+    if (!prices) return;
+
+    // Kumpulkan semua pasangan forex saja
+    const forexPairs = [];
+    Object.entries(prices).forEach(([key, d]) => {
+      if (d.assetClass === 'forex') {
+        forexPairs.push({ key, ...d });
+      }
+    });
+
+    if (forexPairs.length === 0) {
+      heatmapEl.innerHTML = '<div class="heatmap-loading">Memuat data forex...</div>';
+      return;
+    }
+
+    forexPairs.sort((a, b) => (b.changePct || 0) - (a.changePct || 0));
+    const maxAbs = Math.max(...forexPairs.map(p => Math.abs(p.changePct || 0)), 0.01);
+
+    heatmapEl.innerHTML = forexPairs.map(pair => {
+      const pct      = parseFloat(pair.changePct || 0);
+      const isUp     = pct >= 0;
+      const intensity= Math.min(Math.abs(pct) / maxAbs, 1);
+      const alpha    = 0.15 + intensity * 0.65;
+      const bg       = isUp ? `rgba(0, 208, 132, ${alpha})` : `rgba(255, 71, 87, ${alpha})`;
+      const price    = parseFloat(pair.price || 0);
+      const dec      = pair.decimals || 5;
+      const priceStr = price.toFixed(dec);
+      const chgStr   = (isUp ? '+' : '') + pct.toFixed(2) + '%';
+
+      return `<div class="heatmap-cell" style="background:${bg};" title="${pair.display || pair.key}">
+        <div class="heatmap-sym">${pair.display || pair.key}</div>
+        <div class="heatmap-price">${priceStr}</div>
+        <div class="heatmap-chg" style="color:${isUp ? '#00d084' : '#ff4757'}">${chgStr}</div>
+      </div>`;
+    }).join('');
+  };
+
+  document.addEventListener('pricesUpdated', function() {
+    if (window.renderForexHeatmap) window.renderForexHeatmap();
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // METALS HEATMAP — Render metals & commodities dari AppState
+  // Mendukung: XAUTUSDT (Gold), XAGUSDT (Silver), CLUSDT (Oil)
+  // ═══════════════════════════════════════════════════════════════
+  window.renderMetalsHeatmap = function() {
+    const heatmapEl = document.getElementById('metals-heatmap') ||
+                      document.querySelector('.metals-heatmap') ||
+                      document.querySelector('[data-heatmap="metals"]');
+    if (!heatmapEl) return;
+
+    const prices   = (window.AppState && window.AppState.prices) || {};
+    const metals   = (window.AppState && window.AppState.metals) || {};
+
+    // Gabungkan dari prices (filter metals/commodities) + metals state + symbol eksplisit
+    const seen     = new Set();
+    const metalArr = [];
+
+    const addIfNew = (key, d) => {
+      if (seen.has(key)) return;
+      if (!d || d.price == null) return;
+      seen.add(key);
+      metalArr.push({ key, ...d });
+    };
+
+    // 1. Dari AppState.metals (paling andal)
+    Object.entries(metals).forEach(([k, d]) => addIfNew(k, d));
+
+    // 2. Dari AppState.prices dengan assetClass metals/commodities
+    Object.entries(prices).forEach(([k, d]) => {
+      if (d.assetClass === 'metals' || d.assetClass === 'commodities') addIfNew(k, d);
+    });
+
+    // 3. Eksplisit simbol Binance metals
+    ['XAUTUSDT', 'XAGUSDT', 'CLUSDT'].forEach(sym => {
+      addIfNew(sym, prices[sym]);
+    });
+
+    if (metalArr.length === 0) {
+      heatmapEl.innerHTML = '<div class="heatmap-loading">Menunggu data metals dari Binance...</div>';
+      return;
+    }
+
+    metalArr.sort((a, b) => (b.changePct || 0) - (a.changePct || 0));
+    const maxAbs = Math.max(...metalArr.map(p => Math.abs(p.changePct || 0)), 0.01);
+
+    heatmapEl.innerHTML = metalArr.map(m => {
+      const pct       = parseFloat(m.changePct || 0);
+      const isUp      = pct >= 0;
+      const intensity = Math.min(Math.abs(pct) / maxAbs, 1);
+      const alpha     = 0.15 + intensity * 0.65;
+      const bg        = isUp ? `rgba(0, 208, 132, ${alpha})` : `rgba(255, 71, 87, ${alpha})`;
+      const price     = parseFloat(m.price || 0);
+      const dec       = m.decimals || 2;
+      const priceStr  = price.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+      const chgStr    = (isUp ? '+' : '') + pct.toFixed(2) + '%';
+      const label     = m.display || m.key;
+      const srcTag    = m.isFallback
+        ? '<span style="font-size:9px;opacity:0.5"> (est)</span>'
+        : '<span style="font-size:9px;opacity:0.5"> ●</span>';
+
+      return `<div class="heatmap-cell" style="background:${bg};" title="${label} — ${m.name || ''}">
+        <div class="heatmap-sym">${label}${srcTag}</div>
+        <div class="heatmap-price">$${priceStr}</div>
+        <div class="heatmap-chg" style="color:${isUp ? '#00d084' : '#ff4757'}">${chgStr}</div>
+      </div>`;
+    }).join('');
+  };
+
+  document.addEventListener('pricesUpdated', function() {
+    if (window.renderMetalsHeatmap) window.renderMetalsHeatmap();
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // METALS MARKET PRICE TABLE — Harga pasar metals di dashboard
+  // Mendukung semua simbol metals: XAUTUSDT, XAGUSDT, CLUSDT
+  // ═══════════════════════════════════════════════════════════════
+  window.renderMetalsPriceTable = function() {
+    const tableEl = document.getElementById('metals-price-table') ||
+                    document.querySelector('.metals-price-table') ||
+                    document.querySelector('[data-price-table="metals"]');
+    if (!tableEl) return;
+
+    const prices = (window.AppState && window.AppState.prices) || {};
+    const metals = (window.AppState && window.AppState.metals) || {};
+    const seen   = new Set();
+    const rows   = [];
+
+    const addRow = (key, d) => {
+      if (seen.has(key) || !d || d.price == null) return;
+      seen.add(key);
+      rows.push({ key, ...d });
+    };
+
+    // Prioritas: metals state > prices metals/commodities > eksplisit simbol
+    Object.entries(metals).forEach(([k, d]) => addRow(k, d));
+    Object.entries(prices).forEach(([k, d]) => {
+      if (d.assetClass === 'metals' || d.assetClass === 'commodities') addRow(k, d);
+    });
+    ['XAUTUSDT', 'XAGUSDT', 'CLUSDT'].forEach(sym => addRow(sym, prices[sym]));
+
+    if (rows.length === 0) {
+      tableEl.innerHTML = '<div class="heatmap-loading">Memuat harga metals...</div>';
+      return;
+    }
+
+    tableEl.innerHTML = rows.map(d => {
+      const pct    = parseFloat(d.changePct || 0);
+      const isUp   = pct >= 0;
+      const price  = parseFloat(d.price || 0);
+      const dec    = d.decimals || 2;
+      const prStr  = price.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+      const chgStr = (isUp ? '+' : '') + pct.toFixed(2) + '%';
+      const color  = isUp ? '#00d084' : '#ff4757';
+      const arrow  = isUp ? '▲' : '▼';
+      const src    = d.isFallback ? '<span class="mp-source">est</span>' : '<span class="mp-source">Binance</span>';
+      return `<div class="market-price-row">
+        <span class="mp-sym">${d.display || d.key}</span>
+        <span class="mp-name">${d.name || ''}</span>
+        <span class="mp-price">$${prStr}</span>
+        <span class="mp-chg" style="color:${color}">${arrow} ${chgStr}</span>
+        ${src}
+      </div>`;
+    }).join('');
+  };
+
+  document.addEventListener('pricesUpdated', function() {
+    if (window.renderMetalsPriceTable) window.renderMetalsPriceTable();
+  });
+
+  // ═══════════════════════════════════════
+  // OVERRIDE showToast — non-operasional
+  // Semua toast dinonaktifkan, hanya console.log
+  // ═══════════════════════════════════════
+  window.showToast = function(msg, type, duration) {
+    // Toast dinonaktifkan — hanya log ke konsol
+    console.log(`[Toast suppressed] [${type||'info'}] ${msg}`);
+  };
+
+  // ═══════════════════════════════════════
+  // RESTORE STATE — Sidebar collapsed
+  // ═══════════════════════════════════════
+  function restoreState() {
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+      const sidebar = document.getElementById('sidebar');
+      const layout  = document.getElementById('app-layout');
+      if (sidebar) sidebar.classList.add('collapsed');
+      if (layout)  layout.classList.add('sidebar-collapsed');
+    }
+  }
+
+  // ═══════════════════════════════════════
+  // DOMContentLoaded — BOOT SEQUENCE
+  // ═══════════════════════════════════════
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('[ProTrader] Booting v3.0...');
+
+    // 1. Restore persisted state
+    restoreState();
+
+    // 2. Start clock
+    startClock();
+
+    // 3. Apply saved dark/light mode
+    const savedMode = localStorage.getItem('darkMode');
+    if (savedMode === 'false') {
+      document.body.classList.replace('dark-mode', 'light-mode');
+    }
+
+    // 4. Inisialisasi API & fetch data awal
+    if (window.AppInit) {
+      window.AppInit();
+    } else {
+      console.warn('[ProTrader] AppInit tidak ditemukan. Pastikan api.js sudah di-load.');
+    }
+
+    // 5. Minta izin notifikasi (opsional, tanpa toast)
+    if (window.UI && window.UI.requestNotificationPermission) {
+      window.UI.requestNotificationPermission();
+    }
+
+    // 6. Tentukan halaman awal dari URL hash atau default 'dashboard'
+    const hashPage = window.location.hash.replace('#', '') || 'dashboard';
+    const validPages = ['dashboard','chart','analysis','calculator','news','screener'];
+    const startPage  = validPages.includes(hashPage) ? hashPage : 'dashboard';
+
+    // 7. Load halaman pertama
+    loadPage(startPage);
+
+    // 8. Session market update
+    if (window.UI && window.UI.updateMarketSessionDisplay) {
+      window.UI.updateMarketSessionDisplay();
+    }
+
+    // 9. Override UI.showToast jika ada di ui.js
+    // Tunggu sampai ui.js load sepenuhnya
+    setTimeout(() => {
+      if (window.UI && window.UI.showToast) {
+        const _origToast = window.UI.showToast;
+        window.UI.showToast = function(msg, type, duration) {
+          // Blokir toast error koneksi (tidak perlu tampil ke user)
+          const suppressPatterns = [
+            'koneksi', 'gagal', 'error', 'cek jaringan',
+            'goldapi', 'connection', 'network', 'fetch'
+          ];
+          const lower = (msg || '').toLowerCase();
+          if (suppressPatterns.some(p => lower.includes(p))) {
+            console.log(`[Toast suppressed] ${msg}`);
+            return;
+          }
+          // Toast lain (price alert, dll) tetap ditampilkan
+          _origToast.call(window.UI, msg, type, duration);
+        };
+      }
+    }, 1000);
+
+    console.log('[ProTrader] Boot selesai.');
+  });
+  </script>
+
+</body>
+</html>
