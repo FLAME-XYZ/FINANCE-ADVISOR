@@ -1,0 +1,961 @@
+<div class="np" id="news-page">
+<style>
+.np{
+  --c-bg0:#0a0e17;
+  --c-bg1:#0f1520;
+  --c-bg2:#141b28;
+  --c-bg3:#1a2235;
+  --c-border:#1e2d45;
+  --c-border2:#253550;
+  --c-text:#c8d8f0;
+  --c-sub:#5a7498;
+  --c-mute:#3a506e;
+  --c-blue:#3d85e0;
+  --c-blue2:#5ba0f8;
+  --c-green:#00c878;
+  --c-red:#f04060;
+  --c-gold:#e8a020;
+  --c-cyan:#20c8e8;
+  --c-mono:'JetBrains Mono',monospace;
+  all:initial;
+  display:block;
+  font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;
+  background:var(--c-bg0);
+  color:var(--c-text);
+  width:100%;
+  height:100%;
+  box-sizing:border-box;
+}
+.np *,.np *::before,.np *::after{box-sizing:border-box;margin:0;padding:0}
+.np button{font-family:inherit;cursor:pointer}
+.np input{font-family:inherit}
+
+/* ─── HEADER BAR ─── */
+.np-header{
+  display:flex;
+  align-items:center;
+  background:var(--c-bg1);
+  border-bottom:1px solid var(--c-border);
+  height:52px;
+  padding:0 16px 0 0;
+  gap:0;
+}
+.np-tabs{
+  display:flex;
+  align-items:center;
+  flex:1;
+  height:100%;
+  padding:0 12px;
+  gap:6px;
+}
+.np-tab{
+  display:flex;align-items:center;gap:7px;
+  padding:6px 16px;
+  background:var(--c-bg2);
+  border:1px solid var(--c-border);
+  border-radius:5px;
+  color:var(--c-sub);
+  font-size:12px;font-weight:600;letter-spacing:.01em;
+  transition:all .15s;
+  white-space:nowrap;
+  position:relative;
+  height:34px;
+  cursor:pointer;
+}
+.np-tab:hover{
+  color:var(--c-text);
+  border-color:var(--c-border2);
+  background:var(--c-bg3);
+}
+.np-tab.on{
+  color:var(--c-blue2);
+  border-color:var(--c-blue);
+  background:rgba(61,133,224,.12);
+}
+.np-tab .ti{font-size:14px}
+.np-tab-count{
+  background:var(--c-red);
+  color:#fff;font-size:10px;font-weight:700;
+  padding:1px 5px;border-radius:99px;
+  display:none;
+}
+
+.np-hright{
+  display:flex;align-items:center;gap:14px;
+  padding:0 0 0 16px;
+  border-left:1px solid var(--c-border);
+  height:100%;
+}
+.np-live{
+  display:flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:600;letter-spacing:.1em;
+  color:var(--c-red);
+}
+.np-live-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--c-red);
+  animation:blink 1.4s infinite;
+}
+.np-clock{
+  font-family:var(--c-mono);
+  font-size:12px;color:var(--c-sub);
+  letter-spacing:.04em;
+}
+
+/* ─── SENTIMENT BAR ─── */
+.np-sbar{
+  display:flex;align-items:center;gap:0;
+  background:var(--c-bg2);
+  border-bottom:1px solid var(--c-border);
+  height:36px;
+  padding:0 16px;
+  overflow:hidden;
+}
+.np-sbar-label{
+  font-size:10px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--c-mute);
+  margin-right:14px;white-space:nowrap;flex-shrink:0;
+}
+.np-sbar-items{
+  display:flex;align-items:center;gap:6px;flex:1;overflow:hidden;
+}
+.np-sitem{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:4px;
+  font-size:11px;font-weight:600;white-space:nowrap;
+  border:1px solid transparent;flex-shrink:0;
+}
+.np-sitem.bull{background:rgba(0,200,120,.08);color:var(--c-green);border-color:rgba(0,200,120,.2)}
+.np-sitem.bear{background:rgba(240,64,96,.08);color:var(--c-red);border-color:rgba(240,64,96,.2)}
+.np-sitem.neut{background:rgba(61,133,224,.08);color:var(--c-blue2);border-color:rgba(61,133,224,.2)}
+.np-sitem.warn{background:rgba(232,160,32,.08);color:var(--c-gold);border-color:rgba(232,160,32,.2)}
+
+.np-fear-wrap{
+  display:flex;align-items:center;gap:8px;
+  margin-left:auto;flex-shrink:0;padding-left:16px;
+  border-left:1px solid var(--c-border);
+}
+.np-fear-label{font-size:10px;color:var(--c-sub);white-space:nowrap}
+.np-fear-track{
+  width:80px;height:4px;
+  background:var(--c-border2);border-radius:99px;overflow:hidden;
+}
+.np-fear-fill{
+  height:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--c-red),var(--c-gold),var(--c-green));
+  transition:width .6s ease;
+}
+.np-fear-val{
+  font-family:var(--c-mono);font-size:11px;font-weight:700;
+  min-width:24px;text-align:right;
+}
+.np-fear-mood{
+  font-size:11px;font-weight:700;letter-spacing:.02em;white-space:nowrap;
+}
+
+/* ─── PANES ─── */
+.np-pane{display:none;width:100%}
+.np-pane.on{display:block}
+
+/* ─── CALENDAR TAB ─── */
+.np-cal-toolbar{
+  display:flex;flex-direction:column;gap:8px;
+  padding:10px 16px;
+  background:var(--c-bg1);
+  border-bottom:1px solid var(--c-border);
+}
+.np-cal-botrow{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.np-tlabel{
+  font-size:10px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--c-mute);
+  margin-right:2px;white-space:nowrap;
+}
+.np-pills{display:flex;gap:4px}
+.np-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  background:transparent;
+  border:1px solid var(--c-border2);
+  color:var(--c-sub);
+  font-size:11px;font-weight:600;
+  padding:5px 12px;border-radius:4px;
+  transition:all .12s;white-space:nowrap;
+}
+.np-pdot{
+  width:6px;height:6px;border-radius:50%;flex-shrink:0;
+  animation:blink 1.4s infinite;
+}
+.np-pill:hover{color:var(--c-text);border-color:var(--c-blue)}
+.np-pill.on{background:var(--c-blue);border-color:var(--c-blue);color:#fff}
+.np-pill.on.hi{background:var(--c-red);border-color:var(--c-red)}
+.np-pill.on.me{background:var(--c-gold);border-color:var(--c-gold);color:#111}
+.np-pill.on.lo{background:var(--c-green);border-color:var(--c-green);color:#111}
+.np-sep{width:1px;height:18px;background:var(--c-border);margin:0 4px;flex-shrink:0}
+.np-sel{
+  background:var(--c-bg2);
+  border:1px solid var(--c-border2);
+  color:var(--c-text);
+  font-size:11px;padding:5px 28px 5px 10px;border-radius:4px;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a7498'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center;
+  cursor:pointer;
+}
+
+.np-cal-body{
+  padding:0;
+  background:var(--c-bg0);
+}
+.np-tv-card{
+  background:var(--c-bg1);
+  border:none;
+  border-radius:0;
+  overflow:hidden;
+  position:relative;
+  width:100%;
+  min-height:700px;
+}
+.np-tv-loader{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;background:var(--c-bg1);z-index:5;
+}
+.np-spin{
+  width:28px;height:28px;border-radius:50%;
+  border:2px solid var(--c-border2);
+  border-top-color:var(--c-blue);
+  animation:spin .8s linear infinite;
+}
+.np-tv-loader span{font-size:12px;color:var(--c-sub)}
+#np-tv-container{width:100%;min-height:700px}
+.np-cal-foot{
+  padding:8px 16px;
+  background:var(--c-bg1);
+  border-top:1px solid var(--c-border);
+  display:flex;justify-content:space-between;
+  font-size:10px;color:var(--c-mute);letter-spacing:.02em;
+}
+
+/* ─── NEWS TAB ─── */
+.np-news-toolbar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 16px;
+  background:var(--c-bg1);
+  border-bottom:1px solid var(--c-border);
+}
+.np-search{
+  position:relative;flex:1;min-width:160px;max-width:260px;
+}
+.np-search input{
+  width:100%;background:var(--c-bg2);
+  border:1px solid var(--c-border2);color:var(--c-text);
+  padding:5px 10px 5px 32px;border-radius:4px;font-size:12px;
+  transition:border-color .12s;
+}
+.np-search input:focus{border-color:var(--c-blue);outline:none}
+.np-search input::placeholder{color:var(--c-mute)}
+.np-search .ti{
+  position:absolute;left:10px;top:50%;transform:translateY(-50%);
+  font-size:14px;color:var(--c-mute);pointer-events:none;
+}
+.np-refresh{
+  display:flex;align-items:center;gap:7px;margin-left:auto;
+}
+.np-rfcount{font-family:var(--c-mono);font-size:11px;color:var(--c-sub)}
+.np-rfbtn{
+  background:var(--c-bg2);border:1px solid var(--c-border2);
+  color:var(--c-sub);width:28px;height:28px;border-radius:50%;
+  font-size:14px;display:flex;align-items:center;justify-content:center;
+  transition:transform .2s,color .15s;
+}
+.np-rfbtn:hover{color:var(--c-green);transform:rotate(90deg)}
+
+/* ─── NEWS LAYOUT ─── */
+.np-news-body{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:0;
+  background:var(--c-bg0);
+  min-height:calc(100vh - 180px);
+}
+
+/* left sidebar - hidden, not needed */
+.np-sidebar{
+  display:none;
+}
+
+/* news main - full width */
+.np-news-main{
+  padding:14px 20px;
+  display:flex;flex-direction:column;gap:10px;
+  border-right:none;
+}
+
+/* right aside - hidden */
+.np-aside{
+  display:none;
+}
+
+.np-card{
+  background:var(--c-bg2);
+  border:1px solid var(--c-border);
+  border-radius:6px;
+  padding:14px;
+}
+.np-card-title{
+  font-size:9px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--c-mute);margin-bottom:14px;
+}
+
+/* gauge */
+.np-gauge-wrap{text-align:center;padding:4px 0}
+.np-gauge-wrap svg{width:100%;max-width:150px}
+.np-glabel{font-size:16px;font-weight:700;margin-top:6px}
+.np-gsub{font-size:11px;color:var(--c-sub);margin-top:2px}
+
+/* impact bars */
+.np-irow{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.np-irow:last-child{margin-bottom:0}
+.np-idot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.np-ikey{font-size:11px;color:var(--c-sub);flex:1}
+.np-itrack{flex:2;height:3px;border-radius:99px;background:var(--c-border2);overflow:hidden}
+.np-ifill{height:100%;border-radius:99px;transition:width .5s ease}
+.np-ival{font-family:var(--c-mono);font-size:10px;color:var(--c-sub);min-width:18px;text-align:right}
+
+/* currency meters */
+.np-mrow{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.np-mrow:last-child{margin-bottom:0}
+.np-mkey{font-size:10px;color:var(--c-sub);flex:1;white-space:nowrap}
+.np-mtrack{flex:2;height:3px;border-radius:99px;background:var(--c-border2);overflow:hidden}
+.np-mfill{height:100%;border-radius:99px;background:var(--c-blue);transition:width .5s ease}
+.np-mval{font-family:var(--c-mono);font-size:10px;color:var(--c-sub);min-width:18px;text-align:right}
+
+/* news main */
+.np-new-badge{
+  display:none;
+  align-items:center;gap:6px;
+  padding:8px 12px;
+  background:rgba(0,200,120,.07);
+  border:1px solid rgba(0,200,120,.25);
+  border-radius:4px;
+  color:var(--c-green);font-size:11px;font-weight:600;
+  animation:fadein .25s ease;
+}
+.np-news-scroll{
+  display:flex;flex-direction:column;gap:8px;
+  overflow-y:auto;
+  max-height:calc(100vh - 210px);
+  padding-right:4px;
+}
+.np-news-scroll::-webkit-scrollbar{width:4px}
+.np-news-scroll::-webkit-scrollbar-thumb{background:var(--c-border2);border-radius:99px}
+
+.np-ni{
+  background:var(--c-bg1);
+  border:1px solid var(--c-border);
+  border-left:3px solid var(--c-border2);
+  border-radius:0 4px 4px 0;
+  padding:12px 14px;
+  animation:fadein .2s ease;
+  transition:border-color .12s;
+}
+.np-ni:hover{border-color:var(--c-border2);border-left-color:var(--c-blue)}
+.np-ni.hi{border-left-color:var(--c-red)}
+.np-ni.me{border-left-color:var(--c-gold)}
+.np-ni.lo{border-left-color:var(--c-green)}
+.np-ni-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+.np-ichip{
+  font-size:9px;font-weight:700;letter-spacing:.06em;
+  padding:2px 6px;border-radius:3px;
+}
+.np-ichip.hi{background:rgba(240,64,96,.12);color:var(--c-red)}
+.np-ichip.me{background:rgba(232,160,32,.12);color:var(--c-gold)}
+.np-ichip.lo{background:rgba(0,200,120,.12);color:var(--c-green)}
+.np-ntag{
+  font-size:9px;font-weight:700;
+  padding:2px 7px;border-radius:3px;
+  background:rgba(61,133,224,.1);color:var(--c-blue2);
+}
+.np-nsrc{font-size:10px;font-weight:600;color:var(--c-sub)}
+.np-ntime{font-family:var(--c-mono);font-size:10px;color:var(--c-mute);margin-left:auto}
+.np-ndemo{
+  font-size:9px;border:1px solid var(--c-border2);
+  border-radius:3px;padding:0 4px;color:var(--c-mute);
+}
+.np-ntitle{
+  font-size:13px;font-weight:600;line-height:1.4;
+  color:var(--c-text);margin-bottom:5px;
+}
+.np-nsum{
+  font-size:12px;line-height:1.55;color:var(--c-sub);margin-bottom:8px;
+}
+.np-nlink{
+  font-size:11px;font-weight:600;color:var(--c-blue2);text-decoration:none;
+}
+.np-nlink:hover{color:var(--c-cyan)}
+.np-empty{
+  text-align:center;padding:40px 20px;
+  color:var(--c-sub);font-size:12px;
+  background:var(--c-bg1);border:1px solid var(--c-border);
+  border-radius:4px;
+}
+.np-skel{
+  height:90px;border-radius:4px;
+  background:linear-gradient(90deg,var(--c-bg1) 25%,var(--c-bg2) 50%,var(--c-bg1) 75%);
+  background-size:200% 100%;
+  animation:shimmer 1.5s infinite;
+}
+
+/* ─── KEYFRAMES ─── */
+  padding:10px 11px;
+  background:var(--c-bg2);border:1px solid var(--c-border);
+  border-radius:4px;margin-bottom:8px;
+}
+.np-ev:last-child{margin-bottom:0}
+.np-ev-time{font-family:var(--c-mono);font-size:10px;color:var(--c-mute);margin-bottom:3px}
+.np-ev-name{font-size:12px;font-weight:600;line-height:1.3;color:var(--c-text);margin-bottom:4px}
+.np-ev-imp{font-size:10px;font-weight:600}
+
+/* ─── KEYFRAMES ─── */
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){
+  .np-live-dot,.np-spin,.np-skel{animation:none!important}
+}
+</style>
+
+<!-- HEADER -->
+<div class="np-header">
+  <div class="np-tabs">
+    <button class="np-tab on" data-tab="calendar" id="nptab-calendar">
+      <i class="ti ti-calendar-event"></i>
+      Economic Calendar
+    </button>
+    <button class="np-tab" data-tab="news" id="nptab-news">
+      <i class="ti ti-rss"></i>
+      Market News
+      <span class="np-tab-count" id="np-newcount"></span>
+    </button>
+  </div>
+</div>
+
+<!-- SENTIMENT BAR -->
+<div class="np-sbar">
+  <span class="np-fear-mood" id="np-fearmood" style="color:var(--c-gold)">Spekulatif</span>
+  <div class="np-fear-wrap">
+    <span class="np-fear-label">TRADER</span>
+    <div class="np-fear-track"><div class="np-fear-fill" id="np-fearfill" style="width:50%"></div></div>
+    <span class="np-fear-val" id="np-fearval" style="color:var(--c-gold)">50</span>
+  </div>
+</div>
+
+<!-- PANE: CALENDAR -->
+<div class="np-pane on" id="nppane-calendar">
+  <div class="np-cal-toolbar">
+    <div class="np-cal-botrow">
+      <span class="np-live"><span class="np-live-dot"></span>LIVE</span>
+      <span class="np-clock" id="np-clock">00:00:00</span>
+      <div class="np-sep"></div>
+      <span class="np-tlabel">Impact Market Session</span>
+      <div class="np-pills" id="np-impact-filters">
+        <button class="np-pill on" data-impact="all">Semua</button>
+        <button class="np-pill hi" data-impact="1"><span class="np-pdot" style="background:var(--c-red)"></span>High</button>
+        <button class="np-pill me" data-impact="0"><span class="np-pdot" style="background:var(--c-gold)"></span>Medium</button>
+        <button class="np-pill lo" data-impact="-1"><span class="np-pdot" style="background:var(--c-green)"></span>Low</button>
+      </div>
+      <div class="np-sep"></div>
+      <span class="np-tlabel">Negara</span>
+      <select class="np-sel" id="np-cal-currency">
+        <option value="">🌐 Semua</option>
+        <option value="USD">🇺🇸 USD</option>
+        <option value="EUR">🇪🇺 EUR</option>
+        <option value="GBP">🇬🇧 GBP</option>
+        <option value="JPY">🇯🇵 JPY</option>
+        <option value="AUD">🇦🇺 AUD</option>
+        <option value="CAD">🇨🇦 CAD</option>
+        <option value="CHF">🇨🇭 CHF</option>
+        <option value="NZD">🇳🇿 NZD</option>
+        <option value="CNY">🇨🇳 CNY</option>
+      </select>
+      <span class="np-sbar-label">Sentimen</span>
+      <div class="np-sbar-items" id="np-sbar-items">
+        <span class="np-sitem neut">Memuat data pasar...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="np-cal-body">
+    <div class="np-tv-card">
+      <div class="np-tv-loader" id="np-tv-loader">
+        <div class="np-spin"></div>
+        <span>Memuat Economic Calendar...</span>
+      </div>
+      <div id="np-tv-container"></div>
+    </div>
+  </div>
+
+  <div class="np-cal-foot">
+    <span>Data: TradingView &bull; Waktu mengikuti zona perangkat Anda</span>
+    <span id="np-cal-ts">—</span>
+  </div>
+</div>
+
+<!-- PANE: NEWS -->
+<div class="np-pane" id="nppane-news">
+  <div class="np-news-toolbar">
+    <span class="np-tlabel">Mata Uang</span>
+    <div class="np-pills" id="np-currency-pills">
+      <button class="np-pill on" data-curr="USD">🇺🇸 USD</button>
+      <button class="np-pill" data-curr="ALL">🌐 Semua</button>
+      <button class="np-pill" data-curr="EUR">🇪🇺 EUR</button>
+      <button class="np-pill" data-curr="GBP">🇬🇧 GBP</button>
+      <button class="np-pill" data-curr="JPY">🇯🇵 JPY</button>
+      <button class="np-pill" data-curr="AUD">🇦🇺 AUD</button>
+      <button class="np-pill" data-curr="BTC">₿ BTC</button>
+    </div>
+    <div class="np-search">
+      <i class="ti ti-search"></i>
+      <input type="text" id="np-search" placeholder="Cari berita...">
+    </div>
+    <div class="np-refresh">
+      <span class="np-rfcount" id="np-rfcount">5:00</span>
+      <button class="np-rfbtn" id="np-rfbtn" title="Refresh"><i class="ti ti-refresh"></i></button>
+    </div>
+  </div>
+
+  <div class="np-news-body">
+
+    <!-- LEFT SIDEBAR -->
+    <div class="np-sidebar">
+      <div class="np-card">
+        <div class="np-card-title">Indikator Sentimen</div>
+        <div class="np-gauge-wrap">
+          <svg viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="gg" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%"   stop-color="#f04060"/>
+                <stop offset="50%"  stop-color="#e8a020"/>
+                <stop offset="100%" stop-color="#00c878"/>
+              </linearGradient>
+            </defs>
+            <path d="M18 92 A62 62 0 0 1 142 92" fill="none" stroke="#1a2235" stroke-width="12" stroke-linecap="round"/>
+            <path id="np-garc" d="M18 92 A62 62 0 0 1 142 92" fill="none" stroke="url(#gg)" stroke-width="12" stroke-linecap="round" stroke-dasharray="0 194.8" style="transition:stroke-dasharray .7s ease"/>
+            <line id="np-gneedle" x1="80" y1="92" x2="80" y2="38" stroke="#c8d8f0" stroke-width="2" stroke-linecap="round" style="transform-origin:80px 92px;transform:rotate(0deg);transition:transform .7s ease"/>
+            <circle cx="80" cy="92" r="4" fill="#c8d8f0"/>
+            <text x="12" y="100" font-size="9" fill="#f04060" font-family="Inter,sans-serif">Takut</text>
+            <text x="122" y="100" font-size="9" fill="#00c878" font-family="Inter,sans-serif">Rakus</text>
+            <text id="np-gnum" x="80" y="80" font-size="16" font-weight="700" fill="#c8d8f0" text-anchor="middle" font-family="Inter,sans-serif">50</text>
+          </svg>
+          <div class="np-glabel" id="np-glabel" style="color:var(--c-gold)">Netral</div>
+          <div class="np-gsub" id="np-gsub">Menghitung sentimen...</div>
+        </div>
+      </div>
+
+      <div class="np-card">
+        <div class="np-card-title">Distribusi Dampak</div>
+        <div class="np-irow">
+          <div class="np-idot" style="background:var(--c-red)"></div>
+          <span class="np-ikey">High</span>
+          <div class="np-itrack"><div class="np-ifill" id="np-ibar-hi" style="width:0%;background:var(--c-red)"></div></div>
+          <span class="np-ival" id="np-inum-hi">0</span>
+        </div>
+        <div class="np-irow">
+          <div class="np-idot" style="background:var(--c-gold)"></div>
+          <span class="np-ikey">Medium</span>
+          <div class="np-itrack"><div class="np-ifill" id="np-ibar-me" style="width:0%;background:var(--c-gold)"></div></div>
+          <span class="np-ival" id="np-inum-me">0</span>
+        </div>
+        <div class="np-irow">
+          <div class="np-idot" style="background:var(--c-green)"></div>
+          <span class="np-ikey">Low</span>
+          <div class="np-itrack"><div class="np-ifill" id="np-ibar-lo" style="width:0%;background:var(--c-green)"></div></div>
+          <span class="np-ival" id="np-inum-lo">0</span>
+        </div>
+      </div>
+
+      <div class="np-card">
+        <div class="np-card-title">Mata Uang Aktif</div>
+        <div id="np-curmeters"></div>
+      </div>
+    </div>
+
+    <!-- NEWS FEED -->
+    <div class="np-news-main">
+      <div class="np-new-badge" id="np-newbadge"><i class="ti ti-bell-ringing" style="font-size:13px"></i> Berita baru tersedia</div>
+      <div class="np-news-scroll" id="np-newslist">
+        <div class="np-skel"></div><div class="np-skel"></div>
+        <div class="np-skel"></div><div class="np-skel"></div>
+        <div class="np-skel"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT ASIDE -->
+    <div class="np-aside">
+      <div class="np-card">
+        <div class="np-card-title">Event Mendatang</div>
+        <div id="np-events"></div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /pane news -->
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+
+<script>
+(function(){
+'use strict';
+if(window.__npCI) clearInterval(window.__npCI);
+if(window.__npCk) clearInterval(window.__npCk);
+if(window.__npTO) window.__npTO.disconnect();
+
+const NP={
+  items:[],fallback:false,
+  curr:'USD',search:'',impact:'all',calCurr:'',
+  rSec:300,rem:300,activeTab:'calendar'
+};
+const FLAGS={USD:'🇺🇸',EUR:'🇪🇺',GBP:'🇬🇧',JPY:'🇯🇵',AUD:'🇦🇺',CAD:'🇨🇦',CHF:'🇨🇭',NZD:'🇳🇿',CNY:'🇨🇳',BTC:'₿',ETH:'Ξ',XAU:'🥇',OIL:'🛢️'};
+const CKW={
+  USD:['usd','dollar','fed','federal reserve','fomc','nfp','non-farm','nonfarm','greenback'],
+  EUR:['eur','euro','ecb','eurozone'],GBP:['gbp','pound','sterling','boe'],
+  JPY:['jpy','yen','boj'],AUD:['aud','aussie','rba'],
+  CAD:['cad','loonie','boc'],CHF:['chf','franc','snb'],
+  NZD:['nzd','kiwi','rbnz'],CNY:['cny','yuan','renminbi','pboc'],
+  BTC:['btc','bitcoin'],ETH:['eth','ethereum'],
+  XAU:['gold','xau'],OIL:['oil','wti','crude','brent']
+};
+const HIGH_KW=['fed','ecb','cpi','gdp','nfp','non-farm','rate decision','interest rate','inflation','fomc','rate hike','rate cut'];
+const MED_KW=['pmi','retail sales','trade balance','manufacturing','employment','unemployment','consumer confidence','ppi'];
+const EVENTS=[
+  {t:'14:30',n:'US Core CPI m/m',f:'🇺🇸',i:'hi'},
+  {t:'16:00',n:'ECB Rate Statement',f:'🇪🇺',i:'hi'},
+  {t:'17:30',n:'UK Retail Sales',f:'🇬🇧',i:'me'},
+  {t:'19:00',n:'FOMC Minutes',f:'🇺🇸',i:'hi'},
+  {t:'21:30',n:'US Jobless Claims',f:'🇺🇸',i:'me'},
+];
+const FALLBACK=[
+  {title:'Fed Diperkirakan Tahan Suku Bunga, Pasar Tunggu Sinyal Pemangkasan',link:'#',source:'FXStreet',pubDate:new Date(Date.now()-5*60000).toISOString(),description:'Pelaku pasar memperkirakan The Fed menahan suku bunga pada pertemuan mendatang sembari mencermati data inflasi terbaru yang menunjukkan pendinginan bertahap.'},
+  {title:'ECB Expected to Hold Rates Amid Inflation Concerns',link:'#',source:'FXStreet',pubDate:new Date(Date.now()-32*60000).toISOString(),description:'Pembuat kebijakan ECB menunjukkan sikap berhati-hati karena inflasi zona euro masih di atas target 2% yang ditetapkan bank sentral.'},
+  {title:'Bitcoin Sideways, Trader Tunggu Data CPI AS',link:'#',source:'Yahoo Finance',pubDate:new Date(Date.now()-70*60000).toISOString(),description:'Harga Bitcoin konsolidasi di kisaran support utama menjelang rilis data inflasi Amerika Serikat yang dinantikan pasar pekan ini.'},
+  {title:'GBP/USD Tergelincir Usai PMI Manufaktur Inggris Mengecewakan',link:'#',source:'FXStreet',pubDate:new Date(Date.now()-110*60000).toISOString(),description:'Pound sterling melemah terhadap dolar AS setelah PMI manufaktur Inggris turun di bawah ekspektasi pasar dan level 50.'},
+  {title:'Bank of Japan Hints at Policy Normalization Path',link:'#',source:'FXStreet',pubDate:new Date(Date.now()-150*60000).toISOString(),description:'Yen Jepang menguat setelah pejabat BoJ memberi sinyal kemungkinan normalisasi kebijakan moneter lebih lanjut di paruh kedua tahun ini.'},
+  {title:'Ethereum Outperforms Bitcoin Ahead of Network Upgrade',link:'#',source:'Yahoo Finance',pubDate:new Date(Date.now()-200*60000).toISOString(),description:'Ethereum mencatat kenaikan lebih tinggi dibanding Bitcoin menjelang upgrade jaringan yang dinanti komunitas kripto global.'},
+  {title:'AUD/USD Rebounds on Strong Chinese PMI Data',link:'#',source:'FXStreet',pubDate:new Date(Date.now()-240*60000).toISOString(),description:'Dolar Australia rebound setelah data PMI manufaktur China melampaui ekspektasi, mendorong optimisme permintaan komoditas.'},
+  {title:'Gold Retreats From Weekly High as Dollar Strengthens',link:'#',source:'FXStreet',pubDate:new Date(Date.now()-290*60000).toISOString(),description:'Emas XAU/USD terkoreksi dari level tertinggi mingguan seiring penguatan indeks dolar AS yang menekan logam mulia.'},
+];
+
+/* helpers */
+function dtag(title){
+  const lo=(title||'').toLowerCase(),out=[];
+  Object.entries(CKW).forEach(([c,kws])=>{if(kws.some(k=>lo.includes(k)))out.push(c);});
+  return out;
+}
+function dimp(title){
+  const lo=(title||'').toLowerCase();
+  if(HIGH_KW.some(k=>lo.includes(k)))return'hi';
+  if(MED_KW.some(k=>lo.includes(k)))return'me';
+  return'lo';
+}
+function strip(h){const d=document.createElement('div');d.innerHTML=h||'';return(d.textContent||'').trim();}
+function sum(t,n){const c=strip(t);return c.length<=n?c:c.slice(0,n).replace(/\s+\S*$/,'')+'…';}
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+function ago(ds){
+  const d=new Date(ds).getTime();if(isNaN(d))return'';
+  const s=Math.max(0,Math.floor((Date.now()-d)/1000));
+  if(s<60)return'baru saja';if(s<3600)return Math.floor(s/60)+'m lalu';
+  if(s<86400)return Math.floor(s/3600)+'j lalu';return Math.floor(s/86400)+'h lalu';
+}
+function dedup(a){
+  const s=new Set();
+  return a.filter(it=>{const k=(it.title||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,60);if(!k||s.has(k))return false;s.add(k);return true;});
+}
+function $id(id){return document.getElementById(id);}
+function moodFor(sc){
+  if(sc<=19)return['Mania','var(--c-red)'];
+  if(sc<=39)return['Euforia','#ff8a3d'];
+  if(sc<=59)return['Spekulatif','var(--c-gold)'];
+  if(sc<=79)return['Rasional','var(--c-blue2)'];
+  if(sc<=99)return['Seimbang','var(--c-green)'];
+  return['Normal','var(--c-green)'];
+}
+
+/* clock */
+function startClock(){
+  const el=$id('np-clock');
+  if(!el)return;
+  window.__npCk=setInterval(()=>{
+    if(!$id('np-clock')){clearInterval(window.__npCk);return;}
+    el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  },1000);
+  el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+/* tabs */
+function setupTabs(){
+  document.querySelectorAll('#news-page .np-tab').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const t=btn.dataset.tab;
+      document.querySelectorAll('#news-page .np-tab').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      document.querySelectorAll('#news-page .np-pane').forEach(p=>p.classList.remove('on'));
+      const pane=$id('nppane-'+t);if(pane)pane.classList.add('on');
+      NP.activeTab=t;
+      if(t==='calendar')loadCalWidget();
+      if(t==='news'){const nc=$id('np-newcount');if(nc)nc.style.display='none';}
+    });
+  });
+}
+
+/* sentiment */
+function calcSentiment(){
+  if(!NP.items.length)return;
+  const counts={};let hi=0,me=0,lo=0;
+  NP.items.forEach(it=>{
+    it.tags.forEach(c=>{counts[c]=(counts[c]||0)+1;});
+    if(it.impact==='hi')hi++;else if(it.impact==='me')me++;else lo++;
+  });
+  const total=NP.items.length||1;
+  /* score */
+  let sc=50;
+  const hiR=hi/total;
+  if(hiR>.4)sc=28;else if(hiR>.2)sc=42;else if(hiR<.05)sc=65;
+  const bull=['rebound','surges','gains','rises','outperforms','strong','rally'];
+  const bear=['falls','drops','retreats','weakens','plunges','disappointing','declines'];
+  let bs=0,brs=0;
+  NP.items.forEach(it=>{
+    const t=(it.title+' '+(it.description||'')).toLowerCase();
+    bull.forEach(k=>{if(t.includes(k))bs++;});
+    bear.forEach(k=>{if(t.includes(k))brs++;});
+  });
+  if(bs>brs)sc=Math.min(sc+10,90);if(brs>bs)sc=Math.max(sc-10,10);
+  sc=Math.max(5,Math.min(95,sc));
+
+  /* gauge */
+  const arc=$id('np-garc');
+  if(arc){const filled=(sc/100)*194.8;arc.setAttribute('stroke-dasharray',filled+' '+(194.8-filled));}
+  const needle=$id('np-gneedle');
+  if(needle)needle.style.transform='rotate('+(sc/100*180-90)+'deg)';
+  const gnum=$id('np-gnum');if(gnum)gnum.textContent=sc;
+  const glabel=$id('np-glabel');
+  const gsub=$id('np-gsub');
+  const lmap=sc>=70?['Rakus','var(--c-green)','Sentimen positif mendominasi']:sc>=55?['Sedikit Rakus','var(--c-green)','Bias bullish moderat']:sc>=45?['Netral','var(--c-gold)','Pasar cenderung menunggu']:sc>=30?['Takut','var(--c-red)','Kehati-hatian diperlukan']:['Sangat Takut','var(--c-red)','Risiko tinggi di pasar'];
+  if(glabel){glabel.textContent=lmap[0];glabel.style.color=lmap[1];}
+  if(gsub)gsub.textContent=lmap[2];
+
+  /* impact bars */
+  const maxI=Math.max(hi,me,lo,1);
+  ['hi','me','lo'].forEach((k,i)=>{
+    const n=[hi,me,lo][i];
+    const bar=$id('np-ibar-'+k);const num=$id('np-inum-'+k);
+    if(bar)bar.style.width=Math.round(n/maxI*100)+'%';
+    if(num)num.textContent=n;
+  });
+
+  /* currency meters */
+  const mw=$id('np-curmeters');
+  if(mw){
+    const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+    const mx=sorted[0]?.[1]||1;
+    mw.innerHTML=sorted.map(([c,n])=>`
+      <div class="np-mrow">
+        <span class="np-mkey">${FLAGS[c]||''} ${c}</span>
+        <div class="np-mtrack"><div class="np-mfill" style="width:${Math.round(n/mx*100)}%"></div></div>
+        <span class="np-mval">${n}</span>
+      </div>`).join('');
+  }
+
+  /* sentiment bar */
+  const sbi=$id('np-sbar-items');
+  if(sbi){
+    const mood=lmap[0];const moodClass=sc>=60?'bull':sc>=45?'neut':'bear';
+    const top3=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    let html=`<span class="np-sitem ${moodClass}">${mood}${hi>0?'':''}</span>`;
+    html+=top3.map(([c,n])=>`<span class="np-sitem neut">${FLAGS[c]||''} ${c} <b>${n}</b></span>`).join('');
+    if(hi>0)html+=`<span class="np-sitem warn">${hi} High Impact</span>`;
+    sbi.innerHTML=html;
+  }
+
+  /* fear bar */
+  const ff=$id('np-fearfill');const fv=$id('np-fearval');const fm=$id('np-fearmood');
+  if(ff)ff.style.width=sc+'%';
+  if(fv){fv.textContent=sc;fv.style.color=sc>=60?'var(--c-green)':sc>=45?'var(--c-gold)':'var(--c-red)';}
+  if(fm){const m=moodFor(sc);fm.textContent=m[0];fm.style.color=m[1];}
+}
+
+/* events */
+function renderEvents(){
+  const el=$id('np-events');if(!el)return;
+  const ic={hi:'var(--c-red)',me:'var(--c-gold)',lo:'var(--c-green)'};
+  const il={hi:'High',me:'Medium',lo:'Low'};
+  el.innerHTML=EVENTS.map(e=>`
+    <div class="np-ev">
+      <div class="np-ev-time">${e.f} ${e.t} WIB</div>
+      <div class="np-ev-name">${e.n}</div>
+      <div class="np-ev-imp" style="color:${ic[e.i]}">${il[e.i]} Impact</div>
+    </div>`).join('');
+}
+
+/* fetch rss */
+async function fetchRSS(url,src){
+  const r=await fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(url));
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const d=await r.json();
+  if(d.status!=='ok'||!Array.isArray(d.items))throw new Error('bad format');
+  return d.items.map(it=>({title:it.title,link:it.link,pubDate:it.pubDate,description:it.description||it.content||'',source:src}));
+}
+async function fetchNews(auto){
+  const el=$id('np-newslist');if(!el)return;
+  if(!auto)el.innerHTML=Array(5).fill('<div class="np-skel"></div>').join('');
+  let items=[];let fb=false;
+  try{
+    const res=await Promise.allSettled([
+      fetchRSS('https://www.fxstreet.com/rss/news','FXStreet'),
+      fetchRSS('https://feeds.finance.yahoo.com/rss/2.0/headline?s=BTC-USD','Yahoo Finance'),
+    ]);
+    res.forEach(r=>{if(r.status==='fulfilled')items.push(...r.value);});
+    if(!items.length)throw new Error('no items');
+  }catch(e){console.warn('[NP] fallback',e.message);items=FALLBACK.slice();fb=true;}
+
+  items=dedup(items).sort((a,b)=>new Date(b.pubDate)-new Date(a.pubDate));
+  items=items.map(it=>({...it,tags:dtag(it.title+' '+it.description),impact:dimp(it.title)}));
+
+  if(auto&&NP.items.length){
+    const ok=new Set(NP.items.map(i=>i.link&&i.link!=='#'?i.link:i.title));
+    if(items.some(i=>!ok.has(i.link&&i.link!=='#'?i.link:i.title)))showBadge();
+  }
+  NP.items=items;NP.fallback=fb;
+  buildFeed();calcSentiment();
+}
+function showBadge(){
+  const b=$id('np-newbadge');if(b){b.style.display='flex';setTimeout(()=>{if(b)b.style.display='none';},6000);}
+  const nc=$id('np-newcount');
+  if(nc&&NP.activeTab!=='news'){nc.style.display='inline';nc.textContent='!';}
+}
+
+/* render */
+function passes(it){
+  if(NP.curr&&NP.curr!=='ALL'&&!it.tags.includes(NP.curr))return false;
+  if(NP.search&&!(it.title+' '+it.description).toLowerCase().includes(NP.search))return false;
+  return true;
+}
+function renderItem(it){
+  const tag=it.tags.slice(0,3).map(t=>`<span class="np-ntag">${FLAGS[t]||''} ${t}</span>`).join('');
+  const s=sum(it.description,140);
+  const lnk=it.link&&it.link!=='#'?it.link:null;
+  const dm=NP.fallback?'<span class="np-ndemo">demo</span>':'';
+  return`<article class="np-ni ${it.impact}">
+    <div class="np-ni-top">
+      <span class="np-ichip ${it.impact}">${it.impact==='hi'?'HIGH':it.impact==='me'?'MED':'LOW'}</span>
+      ${tag}
+      <span class="np-nsrc">${esc(it.source)}${dm}</span>
+      <span class="np-ntime">${ago(it.pubDate)}</span>
+    </div>
+    <h3 class="np-ntitle">${esc(it.title)}</h3>
+    <p class="np-nsum">${esc(s)}</p>
+    ${lnk?`<a href="${lnk}" target="_blank" rel="noopener" class="np-nlink">Baca Selengkapnya →</a>`:''}
+  </article>`;
+}
+function buildFeed(){
+  const el=$id('np-newslist');if(!el)return;
+  const f=NP.items.filter(passes);
+  if(!f.length){el.innerHTML='<div class="np-empty">Tidak ada berita sesuai filter.</div>';return;}
+  el.innerHTML=f.map(renderItem).join('');
+}
+
+/* calendar widget */
+function loadCalWidget(){
+  const con=$id('np-tv-container');const ldr=$id('np-tv-loader');
+  if(!con)return;
+  con.innerHTML='';if(ldr)ldr.style.display='flex';
+  const imap={all:'-1,0,1','1':'1','0':'0','-1':'-1'};
+  const dark=document.body.classList.contains('dark-mode');
+  const wrap=document.createElement('div');
+  wrap.className='tradingview-widget-container__widget';
+  con.appendChild(wrap);
+  const s=document.createElement('script');
+  s.type='text/javascript';
+  s.src='https://s3.tradingview.com/external-embedding/embed-widget-events.js';
+  s.async=true;
+  s.textContent=JSON.stringify({
+    colorTheme:dark?'dark':'light',
+    isTransparent:true,
+    width:'100%',height:'700',
+    locale:'id_ID',
+    importanceFilter:imap[NP.impact]||'-1,0,1',
+    currencyFilter:NP.calCurr||'USD,EUR,GBP,JPY,AUD,CAD,CHF,NZD,CNY',
+  });
+  s.onload=()=>{if(ldr)ldr.style.display='none';};
+  setTimeout(()=>{if(ldr)ldr.style.display='none';},4500);
+  const ts=$id('np-cal-ts');
+  if(ts)ts.textContent='Diperbarui '+new Date().toLocaleTimeString('id-ID');
+  con.appendChild(s);
+}
+
+/* theme observer */
+function setupTheme(){
+  let last=document.body.classList.contains('dark-mode');
+  const ob=new MutationObserver(()=>{
+    const now=document.body.classList.contains('dark-mode');
+    if(now!==last){last=now;loadCalWidget();}
+  });
+  ob.observe(document.body,{attributes:true,attributeFilter:['class']});
+  window.__npTO=ob;
+}
+
+/* filter setup */
+function setupImpact(){
+  const w=$id('np-impact-filters');if(!w)return;
+  w.querySelectorAll('.np-pill').forEach(b=>{
+    b.addEventListener('click',()=>{
+      w.querySelectorAll('.np-pill').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');NP.impact=b.dataset.impact;loadCalWidget();
+    });
+  });
+}
+function setupCalCurr(){
+  const s=$id('np-cal-currency');if(!s)return;
+  s.addEventListener('change',()=>{NP.calCurr=s.value;loadCalWidget();});
+}
+function setupCurrPills(){
+  const w=$id('np-currency-pills');if(!w)return;
+  w.querySelectorAll('.np-pill').forEach(b=>{
+    b.addEventListener('click',()=>{
+      w.querySelectorAll('.np-pill').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');NP.curr=b.dataset.curr;buildFeed();
+    });
+  });
+}
+function setupSearch(){
+  const inp=$id('np-search');if(!inp)return;
+  let t;inp.addEventListener('input',()=>{clearTimeout(t);t=setTimeout(()=>{NP.search=inp.value.trim().toLowerCase();buildFeed();},250);});
+}
+function setupRefresh(){
+  const btn=$id('np-rfbtn');if(!btn)return;
+  btn.addEventListener('click',()=>{NP.rem=NP.rSec;fetchNews(true);});
+}
+
+/* countdown */
+function tickCountdown(){
+  const el=$id('np-rfcount');if(!el){clearInterval(window.__npCI);return;}
+  const m=Math.floor(NP.rem/60),s=NP.rem%60;
+  el.textContent=m+':'+(s<10?'0':'')+s;
+  NP.rem--;
+  if(NP.rem<0){NP.rem=NP.rSec;fetchNews(true);}
+}
+
+/* init */
+function init(){
+  setupTabs();setupImpact();setupCalCurr();setupCurrPills();setupSearch();setupRefresh();setupTheme();
+  startClock();renderEvents();
+  /* init gauge at 50 */
+  const arc=$id('np-garc');if(arc)arc.setAttribute('stroke-dasharray','97.4 97.4');
+  loadCalWidget();fetchNews(false);
+  NP.rem=NP.rSec;tickCountdown();
+  window.__npCI=setInterval(tickCountdown,1000);
+}
+window.initNewsPage=init;init();
+})();
+</script>

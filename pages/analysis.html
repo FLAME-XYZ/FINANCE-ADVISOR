@@ -1,0 +1,2181 @@
+<!-- ═══════════════════════════════════════════════════════════
+     ProTrader Analytics — pages/analysis.html  (v3.0)
+     Halaman analisis advanced: SMC, ICT, Fibonacci, Elliott,
+     Wyckoff, Harmonic, Multi-Timeframe, Confluence Score
+     Bergantung pada: window.Analysis, window.Signals,
+                      window.Indicators, window.AppState
+═══════════════════════════════════════════════════════════ -->
+
+<style>
+/* ═══════════════════════════ ANALYSIS PAGE STYLES ═══════════════════════════ */
+
+/* ── Page Layout ── */
+.analysis-page { animation: fadeIn 0.3s ease; }
+
+.analysis-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.analysis-title-block { display: flex; flex-direction: column; gap: 2px; }
+.analysis-page-title  {
+  font-size: 1.05rem; font-weight: 700;
+  color: var(--text-primary); letter-spacing: -0.02em;
+}
+.analysis-page-sub {
+  font-size: 0.72rem; color: var(--text-secondary);
+}
+
+.analysis-controls {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+
+/* ── Instrument Selector ── */
+.an-sym-select, .an-tf-select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: border-color var(--transition);
+  min-width: 120px;
+}
+.an-sym-select:focus, .an-tf-select:focus {
+  border-color: var(--accent-blue);
+  outline: none;
+}
+
+/* ── Analyze Button ── */
+.btn-analyze {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent-green); color: #0d1117;
+  border: none; border-radius: var(--radius);
+  padding: 7px 16px; font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; transition: all var(--transition);
+}
+.btn-analyze:hover { background: #00e893; box-shadow: var(--shadow-green); transform: translateY(-1px); }
+.btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-analyze.loading .btn-analyze-icon { animation: spin 1s linear infinite; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Last Update Badge ── */
+.an-lastupdate {
+  font-size: 0.68rem; color: var(--text-muted);
+  font-family: var(--font-mono);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 5px 9px;
+  white-space: nowrap;
+}
+
+/* ═══════════════════ CONFLUENCE HERO SECTION ═══════════════════ */
+.confluence-hero {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.confluence-gauge-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.cg-title {
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-secondary);
+  width: 100%; text-align: center;
+}
+
+.cg-score-ring {
+  position: relative;
+  width: 140px; height: 140px;
+}
+
+.cg-ring-svg { transform: rotate(-90deg); }
+
+.cg-ring-track {
+  fill: none; stroke: var(--bg-hover);
+  stroke-width: 12; stroke-linecap: round;
+}
+
+.cg-ring-fill {
+  fill: none; stroke-width: 12; stroke-linecap: round;
+  transition: stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1), stroke 0.4s;
+}
+
+.cg-ring-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+
+.cg-score-num {
+  font-size: 2.2rem; font-weight: 700;
+  font-family: var(--font-mono);
+  line-height: 1;
+  transition: color 0.4s;
+}
+
+.cg-score-denom {
+  font-size: 0.7rem; color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.cg-direction-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 14px; border-radius: 20px;
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em;
+  border: 1px solid;
+}
+
+.cg-direction-badge.buy  { background: var(--accent-green-dim); color: var(--accent-green); border-color: rgba(0,208,132,0.3); }
+.cg-direction-badge.sell { background: var(--accent-red-dim);   color: var(--accent-red);   border-color: rgba(255,71,87,0.3); }
+.cg-direction-badge.neutral { background: var(--bg-hover); color: var(--text-secondary); border-color: var(--border-color); }
+
+.cg-strength {
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+
+.cg-methods {
+  width: 100%;
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+
+.cg-method-item {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.7rem;
+}
+
+.cg-method-name { color: var(--text-secondary); }
+.cg-method-pts  {
+  font-family: var(--font-mono); font-weight: 600; font-size: 0.68rem;
+  padding: 1px 6px; border-radius: 10px;
+  background: var(--bg-hover); color: var(--text-primary);
+}
+.cg-method-pts.buy  { background: var(--accent-green-dim); color: var(--accent-green); }
+.cg-method-pts.sell { background: var(--accent-red-dim);   color: var(--accent-red); }
+
+/* Breakdown Bars Card */
+.confluence-breakdown-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.cb-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cb-title {
+  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-secondary);
+}
+
+.cb-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+
+.cb-item {
+  display: grid;
+  grid-template-columns: 130px 1fr 40px;
+  align-items: center;
+  gap: 10px;
+}
+
+.cb-label { font-size: 0.72rem; color: var(--text-secondary); }
+
+.cb-bar-track {
+  height: 6px; background: var(--bg-hover);
+  border-radius: 10px; overflow: hidden;
+  position: relative;
+}
+
+.cb-bar-fill {
+  height: 100%; border-radius: 10px;
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+
+.cb-bar-fill.buy  { background: var(--accent-green); }
+.cb-bar-fill.sell { background: var(--accent-red); }
+.cb-bar-fill.neutral { background: var(--text-muted); }
+
+.cb-pts {
+  font-size: 0.7rem; font-family: var(--font-mono);
+  font-weight: 600; color: var(--text-primary);
+  text-align: right;
+}
+
+/* Trade Setup Card */
+.trade-setup-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.ts-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ts-title {
+  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-secondary);
+}
+
+.ts-body { padding: 16px 18px; }
+
+.ts-levels-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ts-level {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 10px 8px;
+  text-align: center;
+  transition: border-color var(--transition);
+}
+
+.ts-level.entry { border-color: var(--accent-blue); background: var(--accent-blue-dim); }
+.ts-level.sl    { border-color: rgba(255,71,87,0.4); background: var(--accent-red-dim); }
+.ts-level.tp1   { border-color: rgba(0,208,132,0.2); background: rgba(0,208,132,0.04); }
+.ts-level.tp2   { border-color: rgba(0,208,132,0.3); background: rgba(0,208,132,0.06); }
+.ts-level.tp3   { border-color: rgba(0,208,132,0.4); background: rgba(0,208,132,0.08); }
+
+.ts-level-label {
+  font-size: 0.62rem; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+
+.ts-level-price {
+  font-size: 0.88rem; font-weight: 700;
+  font-family: var(--font-mono); color: var(--text-primary);
+}
+
+.ts-level.entry .ts-level-price { color: var(--accent-blue); }
+.ts-level.sl    .ts-level-price { color: var(--accent-red); }
+.ts-level.tp1 .ts-level-price,
+.ts-level.tp2 .ts-level-price,
+.ts-level.tp3 .ts-level-price  { color: var(--accent-green); }
+
+.ts-level-sub {
+  font-size: 0.62rem; color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.ts-rr-row {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+}
+
+.ts-rr-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: var(--radius-sm);
+  font-size: 0.7rem; font-weight: 600;
+  font-family: var(--font-mono);
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+  border: 1px solid rgba(0,208,132,0.2);
+}
+
+.ts-prob-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: var(--radius-sm);
+  font-size: 0.7rem; font-weight: 600;
+  background: var(--bg-hover); color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  margin-left: auto;
+}
+
+/* ═══════════════════ MAIN GRID 3 COLUMN ═══════════════════ */
+.analysis-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.analysis-full-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* ═══════════════════ GENERIC ANALYSIS CARD ═══════════════════ */
+.an-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.an-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 8px;
+}
+
+.an-card-title {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.75rem; font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+
+.an-card-icon {
+  width: 22px; height: 22px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.an-card-icon.green { background: var(--accent-green-dim); }
+.an-card-icon.blue  { background: var(--accent-blue-dim); }
+.an-card-icon.gold  { background: var(--accent-gold-dim); }
+.an-card-icon.red   { background: var(--accent-red-dim); }
+.an-card-icon.purple{ background: rgba(184,146,255,0.15); }
+.an-card-icon.orange{ background: rgba(255,159,67,0.15); }
+
+.an-card-badge {
+  font-size: 0.62rem; font-weight: 700; padding: 2px 7px;
+  border-radius: 10px; letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.an-card-badge.bullish { background: var(--accent-green-dim); color: var(--accent-green); border: 1px solid rgba(0,208,132,0.2); }
+.an-card-badge.bearish { background: var(--accent-red-dim);   color: var(--accent-red);   border: 1px solid rgba(255,71,87,0.2); }
+.an-card-badge.neutral { background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border-color); }
+
+.an-card-body { padding: 14px 16px; }
+
+/* ── Row item inside card ── */
+.an-row {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(48,54,61,0.5);
+  gap: 8px;
+}
+.an-row:last-child { border-bottom: none; }
+
+.an-row-label {
+  font-size: 0.72rem; color: var(--text-secondary);
+  flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.an-row-val {
+  font-size: 0.72rem; font-family: var(--font-mono);
+  font-weight: 600; color: var(--text-primary);
+  text-align: right; flex-shrink: 0;
+}
+.an-row-val.green { color: var(--accent-green); }
+.an-row-val.red   { color: var(--accent-red); }
+.an-row-val.gold  { color: var(--accent-gold); }
+.an-row-val.blue  { color: var(--accent-blue); }
+.an-row-val.purple { color: var(--accent-purple); }
+
+/* ── Small badge inline ── */
+.an-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 4px;
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em;
+}
+.an-badge.bull  { background: var(--accent-green-dim); color: var(--accent-green); }
+.an-badge.bear  { background: var(--accent-red-dim);   color: var(--accent-red); }
+.an-badge.neut  { background: var(--bg-hover); color: var(--text-secondary); }
+.an-badge.gold  { background: var(--accent-gold-dim); color: var(--accent-gold); }
+.an-badge.blue  { background: var(--accent-blue-dim); color: var(--accent-blue); }
+.an-badge.purple{ background: rgba(184,146,255,0.15); color: var(--accent-purple); }
+.an-badge.fresh { background: rgba(0,208,132,0.2); color: var(--accent-green); }
+.an-badge.tested{ background: rgba(255,215,0,0.15); color: var(--accent-gold); }
+.an-badge.warn  { background: rgba(255,159,67,0.15); color: var(--accent-orange); }
+
+/* ═══════════════════ MULTI-TIMEFRAME TABLE ═══════════════════ */
+.mtf-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.mtf-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.mtf-title {
+  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-secondary);
+}
+
+.mtf-body { overflow-x: auto; }
+
+.mtf-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.mtf-table th {
+  padding: 9px 14px;
+  background: var(--bg-secondary);
+  font-size: 0.66rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-secondary); text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.mtf-table td {
+  padding: 9px 14px;
+  border-bottom: 1px solid rgba(48,54,61,0.5);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  transition: background var(--transition);
+}
+
+.mtf-table tbody tr:hover td { background: var(--bg-hover); }
+.mtf-table tbody tr:last-child td { border-bottom: none; }
+
+.mtf-tf-label {
+  font-size: 0.7rem; font-weight: 700;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+}
+
+.mtf-signal-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  display: inline-block; margin-right: 6px;
+}
+.mtf-signal-dot.buy { background: var(--accent-green); box-shadow: 0 0 6px rgba(0,208,132,0.5); }
+.mtf-signal-dot.sell{ background: var(--accent-red);   box-shadow: 0 0 6px rgba(255,71,87,0.5); }
+.mtf-signal-dot.neutral { background: var(--text-muted); }
+
+.mtf-conf-bar {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.68rem;
+}
+.mtf-conf-track {
+  width: 50px; height: 4px;
+  background: var(--bg-hover); border-radius: 10px; overflow: hidden;
+}
+.mtf-conf-fill {
+  height: 100%; border-radius: 10px;
+  transition: width 0.6s;
+}
+.mtf-conf-fill.buy  { background: var(--accent-green); }
+.mtf-conf-fill.sell { background: var(--accent-red); }
+.mtf-conf-fill.neutral { background: var(--text-muted); }
+
+.mtf-no-data {
+  color: var(--text-muted); font-size: 0.68rem; font-family: var(--font-sans);
+}
+
+/* ═══════════════════ INDICATOR SUMMARY TABLE ═══════════════════ */
+.indsum-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.indsum-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap; gap: 8px;
+}
+
+.indsum-title {
+  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-secondary);
+}
+
+.indsum-overall {
+  display: flex; align-items: center; gap: 8px;
+}
+
+.indsum-dir {
+  font-size: 0.78rem; font-weight: 700;
+  font-family: var(--font-mono); padding: 3px 10px;
+  border-radius: var(--radius-sm);
+}
+.indsum-dir.strong-buy  { background: var(--accent-green); color: #0d1117; }
+.indsum-dir.buy         { background: var(--accent-green-dim); color: var(--accent-green); border: 1px solid rgba(0,208,132,0.3); }
+.indsum-dir.strong-sell { background: var(--accent-red); color: #fff; }
+.indsum-dir.sell        { background: var(--accent-red-dim); color: var(--accent-red); border: 1px solid rgba(255,71,87,0.3); }
+.indsum-dir.neutral     { background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border-color); }
+
+.indsum-tabs {
+  display: flex; border-bottom: 1px solid var(--border-color);
+}
+
+.indsum-tab {
+  flex: 1; padding: 9px 12px; font-size: 0.72rem; font-weight: 500;
+  color: var(--text-secondary); border: none; background: none;
+  cursor: pointer; transition: all var(--transition);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.indsum-tab.active { color: var(--accent-green); border-bottom-color: var(--accent-green); }
+.indsum-tab:hover:not(.active) { color: var(--text-primary); background: var(--bg-hover); }
+
+.indsum-tab-content { display: none; }
+.indsum-tab-content.active { display: block; }
+
+.indsum-row {
+  display: flex; align-items: center;
+  padding: 8px 18px; gap: 10px;
+  border-bottom: 1px solid rgba(48,54,61,0.5);
+  transition: background var(--transition);
+}
+.indsum-row:hover { background: var(--bg-hover); }
+.indsum-row:last-child { border-bottom: none; }
+
+.indsig-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.indsig-dot.BUY   { background: var(--accent-green); }
+.indsig-dot.SELL  { background: var(--accent-red); }
+.indsig-dot.NEUTRAL { background: var(--text-muted); }
+
+.indsig-name {
+  flex: 1; font-size: 0.73rem; color: var(--text-primary);
+}
+
+.indsig-val {
+  font-size: 0.68rem; font-family: var(--font-mono);
+  color: var(--text-muted); max-width: 120px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.indsig-badge {
+  font-size: 0.62rem; font-weight: 700;
+  padding: 2px 7px; border-radius: 10px; letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.indsig-badge.BUY     { background: var(--accent-green-dim); color: var(--accent-green); border: 1px solid rgba(0,208,132,0.2); }
+.indsig-badge.SELL    { background: var(--accent-red-dim);   color: var(--accent-red);   border: 1px solid rgba(255,71,87,0.2); }
+.indsig-badge.NEUTRAL { background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border-color); }
+
+.indsig-note {
+  font-size: 0.65rem; color: var(--text-muted); font-family: var(--font-sans);
+}
+
+.indsig-count-bar {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px; padding: 12px 18px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.indsig-count {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.indsig-count-num { font-size: 1.1rem; font-weight: 700; font-family: var(--font-mono); }
+.indsig-count-lbl { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* OB / FVG / Pattern List */
+.an-zone-list { display: flex; flex-direction: column; gap: 6px; }
+
+.an-zone-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  transition: border-color var(--transition);
+}
+.an-zone-item:hover { border-color: var(--border-bright); }
+.an-zone-item.bull { border-left: 2px solid var(--accent-green); }
+.an-zone-item.bear { border-left: 2px solid var(--accent-red); }
+.an-zone-item.gold { border-left: 2px solid var(--accent-gold); }
+
+.an-zone-type {
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em;
+  padding: 2px 6px; border-radius: 4px;
+  white-space: nowrap;
+}
+.an-zone-type.bull { background: var(--accent-green-dim); color: var(--accent-green); }
+.an-zone-type.bear { background: var(--accent-red-dim);   color: var(--accent-red); }
+.an-zone-type.gold { background: var(--accent-gold-dim);  color: var(--accent-gold); }
+
+.an-zone-range {
+  display: flex; flex-direction: column; gap: 1px;
+}
+.an-zone-high { font-size: 0.7rem; font-family: var(--font-mono); color: var(--accent-green); }
+.an-zone-low  { font-size: 0.7rem; font-family: var(--font-mono); color: var(--accent-red); }
+.an-zone-label { font-size: 0.66rem; color: var(--text-muted); font-family: var(--font-sans); }
+
+.an-zone-status { text-align: right; }
+
+/* Fib table */
+.fib-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+.fib-table td { padding: 5px 8px; border-bottom: 1px solid rgba(48,54,61,0.5); }
+.fib-table tr:last-child td { border-bottom: none; }
+.fib-table td:first-child { color: var(--text-secondary); }
+.fib-table td:nth-child(2) { font-family: var(--font-mono); color: var(--text-primary); }
+.fib-table td:last-child { text-align: right; }
+.fib-gp { background: rgba(255,159,67,0.08); }
+.fib-gp td:first-child { color: var(--accent-orange); font-weight: 600; }
+
+/* Wyckoff visual */
+.wyckoff-phases {
+  display: flex; gap: 3px; margin-bottom: 10px;
+}
+.wyckoff-phase-btn {
+  flex: 1; padding: 5px 4px; text-align: center;
+  font-size: 0.62rem; font-weight: 600; letter-spacing: 0.04em;
+  border-radius: var(--radius-sm); background: var(--bg-secondary);
+  border: 1px solid var(--border-color); color: var(--text-muted);
+  transition: all var(--transition); cursor: default;
+}
+.wyckoff-phase-btn.active-acc { background: var(--accent-green-dim); color: var(--accent-green); border-color: rgba(0,208,132,0.3); }
+.wyckoff-phase-btn.active-mark { background: var(--accent-blue-dim); color: var(--accent-blue); border-color: rgba(77,171,247,0.3); }
+.wyckoff-phase-btn.active-dist { background: var(--accent-red-dim); color: var(--accent-red); border-color: rgba(255,71,87,0.3); }
+.wyckoff-phase-btn.active-mdown { background: rgba(255,159,67,0.15); color: var(--accent-orange); border-color: rgba(255,159,67,0.3); }
+
+/* Harmonic pattern card */
+.harmonic-pattern-item {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 10px; background: var(--bg-secondary);
+  border: 1px solid var(--border-color); border-radius: var(--radius);
+  margin-bottom: 6px; transition: border-color var(--transition);
+}
+.harmonic-pattern-item:last-child { margin-bottom: 0; }
+.harmonic-pattern-item:hover { border-color: var(--border-bright); }
+
+.hp-row { display: flex; align-items: center; justify-content: space-between; }
+.hp-name { font-size: 0.78rem; font-weight: 600; color: var(--text-primary); }
+.hp-ratios { display: flex; gap: 6px; flex-wrap: wrap; }
+.hp-ratio {
+  font-size: 0.6rem; font-family: var(--font-mono);
+  padding: 1px 5px; border-radius: 4px;
+  background: var(--bg-hover); color: var(--text-secondary);
+}
+
+/* Candle Pattern List */
+.cp-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 0; border-bottom: 1px solid rgba(48,54,61,0.5);
+}
+.cp-item:last-child { border-bottom: none; }
+.cp-name { flex: 1; font-size: 0.73rem; color: var(--text-primary); }
+.cp-acc  { font-size: 0.68rem; font-family: var(--font-mono); color: var(--text-muted); }
+
+/* ICT Killzone status bar */
+.kz-bar {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.kz-item {
+  flex: 1; min-width: 60px; padding: 7px 8px; text-align: center;
+  border-radius: var(--radius-sm); border: 1px solid var(--border-color);
+  background: var(--bg-secondary); font-size: 0.66rem; font-weight: 600;
+  color: var(--text-muted); transition: all var(--transition);
+}
+.kz-item.active {
+  background: rgba(255,215,0,0.1); color: var(--accent-gold);
+  border-color: rgba(255,215,0,0.3);
+  box-shadow: 0 0 8px rgba(255,215,0,0.1);
+}
+
+/* Progress confidence bar */
+.conf-progress {
+  display: flex; align-items: center; gap: 8px;
+}
+.conf-progress-track {
+  flex: 1; height: 5px; background: var(--bg-hover);
+  border-radius: 10px; overflow: hidden;
+}
+.conf-progress-fill {
+  height: 100%; border-radius: 10px;
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* AMD Phase chip */
+.amd-phase {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: var(--radius);
+  font-size: 0.72rem; font-weight: 600;
+  border: 1px solid;
+}
+
+/* Empty state for cards */
+.an-empty {
+  padding: 16px; text-align: center;
+  color: var(--text-muted); font-size: 0.72rem;
+}
+
+/* Loading spinner inside card */
+.an-loading {
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; gap: 8px; color: var(--text-muted); font-size: 0.75rem;
+}
+.an-spinner {
+  width: 16px; height: 16px; border: 2px solid var(--border-color);
+  border-top-color: var(--accent-green); border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* No-data notice */
+.an-nodata-notice {
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 0.72rem; color: var(--text-muted);
+  display: flex; align-items: center; gap: 7px;
+}
+
+/* ═══════════════════ RESPONSIVE ═══════════════════ */
+@media (max-width: 1200px) {
+  .analysis-main-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 900px) {
+  .confluence-hero { grid-template-columns: 1fr; }
+  .analysis-main-grid { grid-template-columns: 1fr; }
+  .analysis-full-grid { grid-template-columns: 1fr; }
+  .ts-levels-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .ts-levels-grid { grid-template-columns: repeat(2, 1fr); }
+  .cb-item { grid-template-columns: 110px 1fr 35px; }
+}
+</style>
+
+<!-- ═══════════════════════ HTML CONTENT ═══════════════════════ -->
+<div class="analysis-page" id="analysis-page">
+
+  <!-- PAGE HEADER -->
+  <div class="analysis-header">
+    <div class="analysis-title-block">
+      <h1 class="analysis-page-title">Advanced Analysis</h1>
+      <div class="analysis-page-sub" id="an-subtitle">SMC · ICT · Fibonacci · Elliott · Wyckoff · Harmonic</div>
+    </div>
+    <div class="analysis-controls">
+      <select class="an-sym-select" id="an-sym-select" onchange="anUpdateSymbol()"></select>
+      <select class="an-tf-select" id="an-tf-select" onchange="anUpdateTF()">
+        <option value="M1">1M</option>
+        <option value="M5">5M</option>
+        <option value="M15">15M</option>
+        <option value="M30">30M</option>
+        <option value="H1" selected>H1</option>
+        <option value="H4">H4</option>
+        <option value="D1">D1</option>
+      </select>
+      <button class="btn-analyze" id="btn-analyze" onclick="anRunAnalysis()">
+        <svg class="btn-analyze-icon" width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1C3.69 1 1 3.69 1 7C1 10.31 3.69 13 7 13C10.31 13 13 10.31 13 7C13 3.69 10.31 1 7 1Z" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M9 7L6 5V9L9 7Z" fill="currentColor"/>
+        </svg>
+        Analisis
+      </button>
+      <div class="an-lastupdate" id="an-lastupdate">—</div>
+    </div>
+  </div>
+
+  <!-- ══ CONFLUENCE HERO ══ -->
+  <div class="confluence-hero">
+
+    <!-- Gauge Ring -->
+    <div class="confluence-gauge-card">
+      <div class="cg-title">Confluence Score</div>
+      <div class="cg-score-ring">
+        <svg class="cg-ring-svg" width="140" height="140" viewBox="0 0 140 140">
+          <circle class="cg-ring-track" cx="70" cy="70" r="56"/>
+          <circle class="cg-ring-fill" id="cg-ring-fill" cx="70" cy="70" r="56"
+            stroke-dasharray="352" stroke-dashoffset="352"/>
+        </svg>
+        <div class="cg-ring-center">
+          <span class="cg-score-num" id="cg-score-num">—</span>
+          <span class="cg-score-denom">/ 20</span>
+        </div>
+      </div>
+      <div class="cg-direction-badge neutral" id="cg-dir-badge">
+        <span id="cg-dir-icon">◈</span>
+        <span id="cg-dir-text">MENUNGGU</span>
+      </div>
+      <div class="cg-strength" id="cg-strength">BELUM DIANALISIS</div>
+
+      <div class="cg-methods" id="cg-methods-list">
+        <div style="font-size:0.68rem;color:var(--text-muted);text-align:center;padding:8px 0">
+          Klik Analisis untuk memulai
+        </div>
+      </div>
+    </div>
+
+    <!-- Breakdown Bars -->
+    <div class="confluence-breakdown-card">
+      <div class="cb-header">
+        <span class="cb-title">Breakdown Konfluensi</span>
+        <span class="an-badge neut" id="cb-total-badge">0 pts aktif</span>
+      </div>
+      <div class="cb-body" id="cb-body">
+        <!-- Rendered by JS -->
+        <div class="an-loading"><div class="an-spinner"></div> Menunggu analisis...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TRADE SETUP ══ -->
+  <div class="trade-setup-card" id="trade-setup-card">
+    <div class="ts-header">
+      <span class="ts-title">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="margin-right:5px">
+          <path d="M7 1L8.5 5.5H13L9.5 8L11 12.5L7 9.5L3 12.5L4.5 8L1 5.5H5.5L7 1Z" stroke="var(--accent-gold)" stroke-width="1.2" stroke-linejoin="round"/>
+        </svg>
+        Trade Setup Rekomendasi
+      </span>
+      <span class="an-badge neut" id="ts-prob-label">Probability: —</span>
+    </div>
+    <div class="ts-body">
+      <div class="ts-levels-grid" id="ts-levels-grid">
+        <div class="ts-level entry"><div class="ts-level-label">ENTRY</div><div class="ts-level-price" id="ts-entry">—</div><div class="ts-level-sub">Harga masuk</div></div>
+        <div class="ts-level sl"><div class="ts-level-label">STOP LOSS</div><div class="ts-level-price" id="ts-sl">—</div><div class="ts-level-sub" id="ts-sl-pips">— pips</div></div>
+        <div class="ts-level tp1"><div class="ts-level-label">TP 1</div><div class="ts-level-price" id="ts-tp1">—</div><div class="ts-level-sub" id="ts-tp1-pips">RR 1:1</div></div>
+        <div class="ts-level tp2"><div class="ts-level-label">TP 2</div><div class="ts-level-price" id="ts-tp2">—</div><div class="ts-level-sub" id="ts-tp2-pips">RR 1:2</div></div>
+        <div class="ts-level tp3"><div class="ts-level-label">TP 3</div><div class="ts-level-price" id="ts-tp3">—</div><div class="ts-level-sub" id="ts-tp3-pips">RR 1:4</div></div>
+      </div>
+
+      <!-- ── TradingView Price Row (hanya tampil untuk XAU) ── -->
+      <div id="ts-tv-row" style="
+        background: rgba(77,171,247,0.06);
+        border: 1px solid rgba(77,171,247,0.25);
+        border-radius: var(--radius);
+        padding: 9px 12px;
+        margin-bottom: 10px;
+        display: none;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;">
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <rect x="1" y="1" width="11" height="11" rx="2" stroke="var(--accent-blue)" stroke-width="1.2"/>
+            <path d="M3 9.5L5.5 7L7.5 9L10 5" stroke="var(--accent-blue)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span style="font-size:0.68rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent-blue)">TradingView Price</span>
+          <span style="font-size:0.62rem;color:var(--text-muted)"></span>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-left:4px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+            <span style="font-size:0.6rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">ENTRY</span>
+            <span id="ts-tv-entry" style="font-size:0.9rem;font-weight:700;font-family:var(--font-mono);color:var(--accent-blue)">—</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+            <span style="font-size:0.6rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">SL</span>
+            <span id="ts-tv-sl" style="font-size:0.9rem;font-weight:700;font-family:var(--font-mono);color:var(--accent-red)">—</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+            <span style="font-size:0.6rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">TP 1</span>
+            <span id="ts-tv-tp1" style="font-size:0.9rem;font-weight:700;font-family:var(--font-mono);color:var(--accent-green)">—</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+            <span style="font-size:0.6rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">TP 2</span>
+            <span id="ts-tv-tp2" style="font-size:0.9rem;font-weight:700;font-family:var(--font-mono);color:var(--accent-green)">—</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+            <span style="font-size:0.6rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">TP 3</span>
+            <span id="ts-tv-tp3" style="font-size:0.9rem;font-weight:700;font-family:var(--font-mono);color:var(--accent-green)">—</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;border-left:1px solid var(--border-color);padding-left:16px">
+            <span style="font-size:0.6rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">OFFSET</span>
+            <span id="ts-tv-offset" style="font-size:0.82rem;font-weight:700;font-family:var(--font-mono);color:var(--accent-blue)">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ts-rr-row" id="ts-rr-row">
+        <span class="an-badge neut">Belum ada setup — klik Analisis</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 3-COLUMN MAIN GRID ══ -->
+  <div class="analysis-main-grid">
+
+    <!-- SMC Card -->
+    <div class="an-card">
+      <div class="an-card-header">
+        <div class="an-card-title">
+          <div class="an-card-icon green">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="7" width="4" height="5" rx="1" fill="var(--accent-green)" opacity="0.8"/><rect x="5.5" y="4" width="3" height="8" rx="1" fill="var(--accent-green)"/><rect x="9" y="1.5" width="3" height="10.5" rx="1" fill="var(--accent-green)" opacity="0.6"/></svg>
+          </div>
+          Smart Money Concepts
+        </div>
+        <span class="an-card-badge neutral" id="smc-trend-badge">—</span>
+      </div>
+      <div class="an-card-body" id="smc-body">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- ICT Card -->
+    <div class="an-card">
+      <div class="an-card-header">
+        <div class="an-card-title">
+          <div class="an-card-icon blue">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="var(--accent-blue)" stroke-width="1.2"/><line x1="6.5" y1="2.5" x2="6.5" y2="6.5" stroke="var(--accent-blue)" stroke-width="1.2" stroke-linecap="round"/><line x1="6.5" y1="6.5" x2="9" y2="8" stroke="var(--accent-blue)" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </div>
+          ICT Concepts
+        </div>
+        <span class="an-card-badge neutral" id="ict-kz-badge">—</span>
+      </div>
+      <div class="an-card-body" id="ict-body">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Fibonacci Card -->
+    <div class="an-card">
+      <div class="an-card-header">
+        <div class="an-card-title">
+          <div class="an-card-icon gold">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 11C2 7.5 5 7 6.5 7C8 7 11 6 11 2" stroke="var(--accent-gold)" stroke-width="1.2" stroke-linecap="round"/><circle cx="6.5" cy="7" r="1" fill="var(--accent-gold)"/></svg>
+          </div>
+          Fibonacci
+        </div>
+        <span class="an-card-badge neutral" id="fib-trend-badge">—</span>
+      </div>
+      <div class="an-card-body" id="fib-body">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Order Blocks Card -->
+    <div class="an-card">
+      <div class="an-card-header">
+        <div class="an-card-title">
+          <div class="an-card-icon purple">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="4" width="11" height="5" rx="1" stroke="var(--accent-purple)" stroke-width="1.2"/><line x1="1" y1="6.5" x2="12" y2="6.5" stroke="var(--accent-purple)" stroke-width="0.8" stroke-dasharray="2 2"/></svg>
+          </div>
+          Order Blocks
+        </div>
+        <span class="an-badge blue" id="ob-count-badge">0 aktif</span>
+      </div>
+      <div class="an-card-body" id="ob-body">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- FVG + Supply/Demand -->
+    <div class="an-card">
+      <div class="an-card-header">
+        <div class="an-card-title">
+          <div class="an-card-icon orange">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1.5" width="11" height="3" rx="1" fill="var(--accent-orange)" opacity="0.6"/><rect x="1" y="8.5" width="11" height="3" rx="1" fill="var(--accent-orange)" opacity="0.6"/><line x1="4" y1="5" x2="9" y2="8.5" stroke="var(--accent-orange)" stroke-width="0.8" stroke-dasharray="2 2"/></svg>
+          </div>
+          FVG & Supply/Demand
+        </div>
+        <span class="an-badge neut" id="fvg-count-badge">0 FVG</span>
+      </div>
+      <div class="an-card-body" id="fvg-body">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Candle Patterns Card -->
+    <div class="an-card">
+      <div class="an-card-header">
+        <div class="an-card-title">
+          <div class="an-card-icon red">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="3" y="3" width="3" height="7" rx="0.5" fill="var(--accent-green)"/><line x1="4.5" y1="1.5" x2="4.5" y2="3" stroke="var(--accent-green)" stroke-width="1"/><line x1="4.5" y1="10" x2="4.5" y2="11.5" stroke="var(--accent-green)" stroke-width="1"/><rect x="7" y="2" width="3" height="8" rx="0.5" fill="var(--accent-red)"/><line x1="8.5" y1="1" x2="8.5" y2="2" stroke="var(--accent-red)" stroke-width="1"/><line x1="8.5" y1="10" x2="8.5" y2="12" stroke="var(--accent-red)" stroke-width="1"/></svg>
+          </div>
+          Price Action
+        </div>
+        <span class="an-badge neut" id="cp-count-badge">0 pattern</span>
+      </div>
+      <div class="an-card-body" id="cp-body">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+    </div>
+
+  </div><!-- /analysis-main-grid -->
+
+  <!-- ══ ELLIOTT + WYCKOFF + HARMONIC ROW ══ -->
+  <div class="analysis-full-grid">
+
+    <!-- Elliott Wave -->
+    <div class="an-card">
+      <div class="an-card-header">
+        <div class="an-card-title">
+          <div class="an-card-icon blue">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><polyline points="1,10 3,6 5,8 7,3 9,5 11,2 13,5" stroke="var(--accent-blue)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          </div>
+          Elliott Wave
+        </div>
+        <span class="an-card-badge neutral" id="ew-badge">—</span>
+      </div>
+      <div class="an-card-body" id="ew-body">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Wyckoff -->
+    <div class="an-card">
+      <div class="an-card-header">
+        <div class="an-card-title">
+          <div class="an-card-icon gold">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 10C3 10 3 3 5 3C7 3 7 10 9 10C11 10 11 6 13 6" stroke="var(--accent-gold)" stroke-width="1.2" stroke-linecap="round" fill="none"/></svg>
+          </div>
+          Wyckoff Method
+        </div>
+        <span class="an-card-badge neutral" id="wyckoff-badge">—</span>
+      </div>
+      <div class="an-card-body" id="wyckoff-body">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Harmonic Patterns -->
+    <div class="an-card">
+      <div class="an-card-header">
+        <div class="an-card-title">
+          <div class="an-card-icon purple">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 11L5 3L6.5 7L8 5L10 9L12 5" stroke="var(--accent-purple)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          </div>
+          Harmonic Patterns
+        </div>
+        <span class="an-badge purple" id="harm-count-badge">0 pattern</span>
+      </div>
+      <div class="an-card-body" id="harm-body">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Market Structure Summary -->
+    <div class="an-card">
+      <div class="an-card-header">
+        <div class="an-card-title">
+          <div class="an-card-icon green">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><polyline points="1,10 4,6 7,8 10,4 12,5" stroke="var(--accent-green)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><line x1="1" y1="12" x2="12" y2="12" stroke="var(--text-muted)" stroke-width="0.8"/></svg>
+          </div>
+          Market Structure
+        </div>
+        <span class="an-card-badge neutral" id="ms-badge">—</span>
+      </div>
+      <div class="an-card-body" id="ms-body">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+    </div>
+
+  </div><!-- /analysis-full-grid -->
+
+  <!-- ══ MULTI-TIMEFRAME TABLE ══ -->
+  <div class="mtf-card">
+    <div class="mtf-header">
+      <span class="mtf-title">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="margin-right:5px;vertical-align:middle">
+          <rect x="1" y="4" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+          <line x1="4.5" y1="4" x2="4.5" y2="1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <line x1="9.5" y1="4" x2="9.5" y2="1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <line x1="1" y1="7.5" x2="13" y2="7.5" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+        </svg>
+        Multi-Timeframe Analysis
+      </span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="an-badge neut" id="mtf-align-badge">Alignment: —</span>
+        <span class="an-badge neut" id="mtf-bias-badge">Bias: —</span>
+      </div>
+    </div>
+    <div class="mtf-body">
+      <table class="mtf-table">
+        <thead>
+          <tr>
+            <th>TF</th>
+            <th>Trend</th>
+            <th>Signal</th>
+            <th>Confluence</th>
+            <th>SMC PD</th>
+            <th>Fib Trend</th>
+            <th>RSI</th>
+            <th>MACD</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody id="mtf-tbody">
+          <tr><td colspan="9" class="an-loading"><div class="an-spinner"></div>&nbsp;Menunggu analisis...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:10px 18px;border-top:1px solid var(--border-color);background:var(--bg-secondary)">
+      <div style="font-size:0.68rem;color:var(--text-muted)" id="mtf-recommendation">
+        Pilih instrumen dan klik Analisis untuk melihat MTF.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ INDICATOR SUMMARY ══ -->
+  <div class="indsum-card">
+    <div class="indsum-header">
+      <span class="indsum-title">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="margin-right:5px;vertical-align:middle">
+          <polyline points="1,11 4,7 7,9 10,4 13,6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="1" y1="13" x2="13" y2="13" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+        </svg>
+        Indicator Summary
+      </span>
+      <div class="indsum-overall">
+        <div class="indsum-dir neutral" id="indsum-dir">NEUTRAL</div>
+        <span style="font-size:0.68rem;color:var(--text-muted)" id="indsum-score">Score: 0</span>
+      </div>
+    </div>
+    <div class="indsim-tab-wrap">
+      <div class="indsum-tabs">
+        <button class="indsum-tab active" onclick="anSwitchIndTab('trend', this)">Trend</button>
+        <button class="indsum-tab" onclick="anSwitchIndTab('momentum', this)">Momentum</button>
+        <button class="indsum-tab" onclick="anSwitchIndTab('volume', this)">Volume</button>
+        <button class="indsum-tab" onclick="anSwitchIndTab('volatility', this)">Volatility</button>
+      </div>
+
+      <div class="indsig-count-bar" id="indsig-count-bar-trend">
+        <div class="indsig-count"><span class="indsig-count-num text-green" id="indsig-trend-buy">0</span><span class="indsig-count-lbl">Buy</span></div>
+        <div class="indsig-count"><span class="indsig-count-num text-muted"  id="indsig-trend-neu">0</span><span class="indsig-count-lbl">Neutral</span></div>
+        <div class="indsig-count"><span class="indsig-count-num text-red"    id="indsig-trend-sell">0</span><span class="indsig-count-lbl">Sell</span></div>
+      </div>
+
+      <div class="indsum-tab-content active" id="ind-tab-trend">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+      <div class="indsum-tab-content" id="ind-tab-momentum">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+      <div class="indsum-tab-content" id="ind-tab-volume">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+      <div class="indsum-tab-content" id="ind-tab-volatility">
+        <div class="an-loading"><div class="an-spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /analysis-page -->
+
+<!-- ════════════════════════ JAVASCRIPT CONTROLLER ════════════════════════ -->
+<script>
+(function() {
+'use strict';
+
+/* ─── STATE ─── */
+let _anSymbol    = (window.AppState && window.AppState.selectedInstrument) || 'BTCUSDT';
+let _anTF        = (window.AppState && window.AppState.selectedTimeframe)  || 'H1';
+let _anRunning   = false;
+let _anLastResult= null;
+
+/* ─── HELPERS ─── */
+function _fmt(v, d=5) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  return parseFloat(v).toFixed(d);
+}
+function _fmtPrice(v, sym) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const d = sym && sym.includes('JPY') ? 3 : sym && sym.endsWith('USDT') ? 2 : 5;
+  return parseFloat(v).toFixed(d);
+}
+function _el(id) { return document.getElementById(id); }
+function _getOHLCV(sym, tf) {
+  const s = window.AppState;
+  if (!s || !s.ohlcv) return null;
+  return s.ohlcv[`${sym}_${tf}`] || null;
+}
+
+/* ─── BUILD SYMBOL LIST ─── */
+function anBuildSymbolList() {
+  const sel = _el('an-sym-select');
+  if (!sel) return;
+  const cfg = window.CONFIG;
+  const opts = [];
+  const cryptos = (cfg && cfg.CRYPTO_SYMBOLS) || [];
+  const metals  = (cfg && cfg.METAL_SYMBOLS) || [];
+  if (cryptos.length) {
+    const og = document.createElement('optgroup');
+    og.label = 'Crypto';
+    cryptos.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.symbol; o.textContent = c.display || c.symbol;
+      if (c.symbol === _anSymbol) o.selected = true;
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  }
+  if (metals.length) {
+    const og = document.createElement('optgroup');
+    og.label = 'Metals';
+    metals.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m.symbol; o.textContent = m.display || m.symbol;
+      if (m.symbol === _anSymbol) o.selected = true;
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  }
+  if (!sel.value) {
+    sel.value = 'BTCUSDT';
+    _anSymbol = 'BTCUSDT';
+  }
+}
+
+window.anUpdateSymbol = function() {
+  const sel = _el('an-sym-select');
+  if (sel) { _anSymbol = sel.value; if(window.AppState) window.AppState.selectedInstrument = _anSymbol; }
+};
+window.anUpdateTF = function() {
+  const sel = _el('an-tf-select');
+  if (sel) { _anTF = sel.value; if(window.AppState) window.AppState.selectedTimeframe = _anTF; }
+};
+
+/* ─── MAIN RUN ─── */
+window.anRunAnalysis = async function() {
+  if (_anRunning) return;
+  _anRunning = true;
+
+  const btn = _el('btn-analyze');
+  if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+
+  anShowLoadingAll();
+
+  /* Fetch data jika belum ada */
+  let ohlcv = _getOHLCV(_anSymbol, _anTF);
+  if (!ohlcv || ohlcv.length < 20) {
+    if (window.API && window.API.fetchCryptoKlines) {
+      try { ohlcv = await window.API.fetchCryptoKlines(_anSymbol, _anTF, 500); }
+      catch(e) { /* silent */ }
+    }
+    ohlcv = _getOHLCV(_anSymbol, _anTF);
+  }
+
+  if (!ohlcv || ohlcv.length < 30) {
+    anShowNoData();
+    _anRunning = false;
+    if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+    return;
+  }
+
+  /* Jalankan semua analisis */
+  const price = ohlcv[ohlcv.length - 1].close;
+  const A = window.Analysis;
+  const S = window.Signals;
+
+  let conf, setup, mtf, indsum, allAnalysis;
+
+  try { conf  = S ? S.calcConfluenceScore(ohlcv, price, _anSymbol) : null; } catch(e) { conf = null; }
+  try { setup = S ? S.generateTradeSetup(_anSymbol, ohlcv) : null; } catch(e) { setup = null; }
+  try { mtf   = S ? S.getMTFAnalysis(_anSymbol) : null; } catch(e) { mtf = null; }
+  try { indsum= S ? S.getIndicatorSummary(ohlcv) : null; } catch(e) { indsum = null; }
+  try { allAnalysis = A ? A.runAll(ohlcv, _anSymbol) : null; } catch(e) { allAnalysis = null; }
+
+  _anLastResult = { ohlcv, price, conf, setup, mtf, indsum, allAnalysis };
+
+  /* Render semua sections */
+  anRenderConfluence(conf);
+  anRenderTradeSetup(setup, price);
+  anRenderSMC(allAnalysis);
+  anRenderICT(allAnalysis, ohlcv);
+  anRenderFibonacci(allAnalysis);
+  anRenderOrderBlocks(allAnalysis);
+  anRenderFVG(allAnalysis);
+  anRenderCandlePatterns(allAnalysis);
+  anRenderElliott(allAnalysis);
+  anRenderWyckoff(allAnalysis);
+  anRenderHarmonic(allAnalysis);
+  anRenderMarketStructure(allAnalysis);
+  anRenderMTF(mtf);
+  anRenderIndicatorSummary(indsum);
+
+  /* Last update */
+  const now = new Date();
+  const lu = _el('an-lastupdate');
+  if (lu) lu.textContent = `Update: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  const sub = _el('an-subtitle');
+  if (sub) sub.textContent = `${_anSymbol} · ${_anTF} · ${ohlcv.length} candle`;
+
+  _anRunning = false;
+  if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+};
+
+/* ─── SHOW LOADING ─── */
+function anShowLoadingAll() {
+  const spinner = '<div class="an-loading"><div class="an-spinner"></div></div>';
+  ['smc-body','ict-body','fib-body','ob-body','fvg-body','cp-body',
+   'ew-body','wyckoff-body','harm-body','ms-body'].forEach(id => {
+    const el = _el(id); if (el) el.innerHTML = spinner;
+  });
+  const tb = _el('mtf-tbody');
+  if (tb) tb.innerHTML = `<tr><td colspan="9" class="an-loading"><div class="an-spinner"></div>&nbsp;Memuat...</td></tr>`;
+  ['ind-tab-trend','ind-tab-momentum','ind-tab-volume','ind-tab-volatility'].forEach(id => {
+    const el = _el(id); if (el) el.innerHTML = spinner;
+  });
+}
+
+function anShowNoData() {
+  const msg = `<div class="an-nodata-notice">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="var(--accent-gold)" stroke-width="1.2"/><line x1="7" y1="4.5" x2="7" y2="7.5" stroke="var(--accent-gold)" stroke-width="1.2" stroke-linecap="round"/><circle cx="7" cy="9.5" r="0.7" fill="var(--accent-gold)"/></svg>
+    Data OHLCV ${_anSymbol} ${_anTF} belum tersedia. Buka halaman Chart, pilih instrumen ini, lalu kembali dan klik Analisis.
+  </div>`;
+  ['smc-body','ict-body','fib-body','ob-body','fvg-body','cp-body',
+   'ew-body','wyckoff-body','harm-body','ms-body'].forEach(id => {
+    const el = _el(id); if (el) el.innerHTML = msg;
+  });
+}
+
+/* ═══ CONFLUENCE GAUGE ═══ */
+function anRenderConfluence(conf) {
+  if (!conf) return;
+  const score = conf.total || 0;
+  const dir   = conf.direction || 'neutral';
+  const str   = conf.strength  || 'low';
+
+  /* Ring */
+  const ringFill = _el('cg-ring-fill');
+  if (ringFill) {
+    const circumference = 352;
+    const pct     = Math.min(score / 20, 1);
+    const offset  = circumference - pct * circumference;
+    const color   = dir === 'buy' ? '#00d084' : dir === 'sell' ? '#ff4757' : '#7d8590';
+    ringFill.style.strokeDashoffset = offset;
+    ringFill.setAttribute('stroke', color);
+  }
+
+  const scoreEl = _el('cg-score-num');
+  if (scoreEl) {
+    scoreEl.textContent = score;
+    scoreEl.style.color = dir === 'buy' ? '#00d084' : dir === 'sell' ? '#ff4757' : '#e6edf3';
+  }
+
+  const dirBadge = _el('cg-dir-badge');
+  const dirIcon  = _el('cg-dir-icon');
+  const dirText  = _el('cg-dir-text');
+  if (dirBadge) {
+    dirBadge.className = `cg-direction-badge ${dir}`;
+    if (dirIcon) dirIcon.textContent = dir === 'buy' ? '▲' : dir === 'sell' ? '▼' : '◈';
+    if (dirText) dirText.textContent = dir.toUpperCase();
+  }
+
+  const strEl = _el('cg-strength');
+  if (strEl) {
+    const strMap = { extreme: 'EXTREME STRENGTH', high: 'HIGH STRENGTH', medium: 'MEDIUM STRENGTH', low: 'LOW STRENGTH' };
+    strEl.textContent = strMap[str] || str.toUpperCase();
+  }
+
+  /* Methods list */
+  const ml = _el('cg-methods-list');
+  if (ml && conf.details && conf.details.length > 0) {
+    const shown = conf.details.slice(0, 8);
+    ml.innerHTML = shown.map(d => {
+      const cls = d.signal === 'buy' ? 'buy' : d.signal === 'sell' ? 'sell' : '';
+      const pts = d.points || 0;
+      return `<div class="cg-method-item">
+        <span class="cg-method-name">${d.method}</span>
+        <span class="cg-method-pts ${cls}">+${pts}</span>
+      </div>`;
+    }).join('');
+  }
+
+  /* Breakdown Bars */
+  const cbBody = _el('cb-body');
+  const cbBadge = _el('cb-total-badge');
+  if (cbBadge) cbBadge.textContent = `${score}/20 pts`;
+  if (cbBody && conf.breakdown) {
+    const bk = conf.breakdown;
+    const items = [
+      { key: 'demandSupply',    label: 'Supply/Demand',     max: 2 },
+      { key: 'orderBlock',      label: 'Order Block',        max: 2 },
+      { key: 'fibonacci',       label: 'Fibonacci GP',       max: 2 },
+      { key: 'premiumDiscount', label: 'SMC Premium/Disc',   max: 2 },
+      { key: 'bos',             label: 'BOS / CHoCH',        max: 1 },
+      { key: 'fvg',             label: 'Fair Value Gap',     max: 1 },
+      { key: 'candlePattern',   label: 'Candle Pattern',     max: 1 },
+      { key: 'rsi',             label: 'RSI',                max: 1 },
+      { key: 'macd',            label: 'MACD Cross',         max: 1 },
+      { key: 'killzone',        label: 'ICT Killzone',       max: 1 },
+      { key: 'wyckoff',         label: 'Wyckoff',            max: 1 },
+      { key: 'harmonic',        label: 'Harmonic PRZ',       max: 1 },
+      { key: 'elliott',         label: 'Elliott Wave',       max: 1 },
+    ];
+    cbBody.innerHTML = items.map(item => {
+      const pts  = bk[item.key] || 0;
+      const pct  = Math.min((pts / item.max) * 100, 100);
+      const cls  = pts > 0 ? (dir === 'sell' ? 'sell' : 'buy') : 'neutral';
+      return `<div class="cb-item">
+        <span class="cb-label">${item.label}</span>
+        <div class="cb-bar-track"><div class="cb-bar-fill ${cls}" style="width:${pct}%"></div></div>
+        <span class="cb-pts">${pts}/${item.max}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+/* ═══ TRADE SETUP ═══ */
+function anRenderTradeSetup(setup, price) {
+  if (!setup || !setup.valid) {
+    const rrRow = _el('ts-rr-row');
+    if (rrRow) rrRow.innerHTML = `<span class="an-badge neut">Confluence tidak cukup untuk setup trade (min strength: medium)</span>`;
+    return;
+  }
+  const sym = _anSymbol;
+  const set = (id, val) => { const el = _el(id); if(el) el.textContent = val; };
+  set('ts-entry', _fmtPrice(setup.entry, sym));
+  set('ts-sl',    _fmtPrice(setup.sl, sym));
+  set('ts-tp1',   _fmtPrice(setup.tp1, sym));
+  set('ts-tp2',   _fmtPrice(setup.tp2, sym));
+  set('ts-tp3',   _fmtPrice(setup.tp3, sym));
+  set('ts-sl-pips',  `SL: ${setup.slPips} pips`);
+  set('ts-tp1-pips', `RR 1:${setup.rr1}`);
+  set('ts-tp2-pips', `RR 1:${setup.rr2}`);
+  set('ts-tp3-pips', `RR 1:${setup.rr3}`);
+
+  const probLabel = _el('ts-prob-label');
+  if (probLabel) probLabel.textContent = `Probability: ${setup.probability}%`;
+
+  const rrRow = _el('ts-rr-row');
+  if (rrRow) {
+    const dir = setup.direction;
+    const dirLbl = dir === 'buy' ? '▲ LONG' : '▼ SHORT';
+    const dirCls = dir === 'buy' ? 'bull' : 'bear';
+    rrRow.innerHTML = `
+      <span class="an-badge ${dirCls}" style="font-size:0.72rem;padding:4px 10px">${dirLbl}</span>
+      <span class="ts-rr-badge">RR1 = 1:${setup.rr1}</span>
+      <span class="ts-rr-badge">RR2 = 1:${setup.rr2}</span>
+      <span class="ts-rr-badge">RR3 = 1:${setup.rr3}</span>
+      <span class="ts-rr-badge">ATR: ${_fmtPrice(setup.atr, sym)}</span>
+      <span class="ts-prob-badge">Prob: ${setup.probability}% · ${(setup.strength||'').toUpperCase()}</span>
+    `;
+  }
+
+  /* ── TradingView Price Offset (hanya untuk XAUUSDT) ── */
+  /* Offset = selisih harga TradingView (XAUUSD broker) vs Binance (XAUUSDT).
+     Dari foto: TV = 4310.29, Binance = 4291.86 → offset ≈ +18.43
+     Offset ini bersifat relatif dan dihitung otomatis dari harga live jika tersedia,
+     atau menggunakan nilai default dari foto yang dikirimkan. */
+  anRenderTVPrices(setup, sym);
+}
+
+/* ── TV Price Row Renderer ── */
+function anRenderTVPrices(setup, sym) {
+  const tvRow = _el('ts-tv-row');
+  if (!tvRow) return;
+
+  /* Hanya tampil untuk instrumen XAU (Binance XAUUSDT ↔ TradingView XAUUSD) */
+  const isXAU = sym && (sym === 'XAUUSDT' || sym === 'XAUTUSDT');
+  if (!isXAU || !setup || !setup.valid) {
+    tvRow.style.display = 'none';
+    return;
+  }
+
+  /* ── Hitung offset Binance → TradingView ──
+     Metode: ambil harga live TradingView dari AppState jika tersedia
+     (key: 'XAUUSD_live' atau dihitung dari perbedaan feed).
+     Fallback: gunakan offset referensi dari foto = +18.43 per tanggal foto.
+     Offset disimpan di window._tvBinanceOffset dan diperbarui oleh API jika ada. */
+  let offset = 0;
+
+  /* Cek apakah ada data live dari AppState */
+  const state = window.AppState;
+  if (state && state.tvOffset && typeof state.tvOffset === 'number') {
+    /* Jika ada data offset yang sudah dihitung di tempat lain */
+    offset = state.tvOffset;
+  } else if (state && state.prices) {
+    /* Coba hitung dari harga live jika kedua feed tersedia */
+    const binancePrice = state.prices['XAUUSDT'] || state.prices['XAUTUSDT'];
+    const tvPrice      = state.prices['XAUUSD'];
+    if (binancePrice && tvPrice && binancePrice > 0) {
+      offset = tvPrice - binancePrice;
+      /* Simpan untuk referensi berikutnya */
+      state.tvOffset = offset;
+    }
+  }
+
+  /* Jika offset belum diperoleh, gunakan offset referensi dari foto:
+     TV(4310.29) - Binance(4291.86) = +18.43 — ini berjalan proporsional
+     karena kedua chart bergerak paralel dengan selisih konstan */
+  if (offset === 0) {
+    offset = 18.43; /* referensi foto 18 Jun 2026 */
+  }
+
+  /* Konversi semua level: tambahkan offset ke harga Binance */
+  const dec = 2; /* XAUUSD 2 desimal */
+  const conv = (v) => {
+    const num = parseFloat(v);
+    if (!v || isNaN(num)) return '—';
+    return (num + offset).toFixed(dec);
+  };
+
+  const setTV = (id, val) => { const el = _el(id); if (el) el.textContent = val; };
+  setTV('ts-tv-entry',  conv(setup.entry));
+  setTV('ts-tv-sl',     conv(setup.sl));
+  setTV('ts-tv-tp1',    conv(setup.tp1));
+  setTV('ts-tv-tp2',    conv(setup.tp2));
+  setTV('ts-tv-tp3',    conv(setup.tp3));
+
+  const offsetSign = offset >= 0 ? `+${offset.toFixed(2)}` : offset.toFixed(2);
+  setTV('ts-tv-offset', offsetSign);
+
+  tvRow.style.display = 'flex';
+}
+
+/* ═══ SMC ═══ */
+function anRenderSMC(all) {
+  const el = _el('smc-body');
+  const badge = _el('smc-trend-badge');
+  if (!all || !all.structure) {
+    if (el) el.innerHTML = '<div class="an-empty">Data tidak tersedia</div>';
+    return;
+  }
+  const ms = all.structure;
+  const pd = all.premiumDiscount;
+  const liq= all.liquidity;
+  if (badge) {
+    badge.className = `an-card-badge ${ms.trend === 'uptrend' ? 'bullish' : ms.trend === 'downtrend' ? 'bearish' : 'neutral'}`;
+    badge.textContent = ms.trend === 'uptrend' ? '↑ UPTREND' : ms.trend === 'downtrend' ? '↓ DOWNTREND' : 'RANGING';
+  }
+  let html = '';
+  html += anRow('Struktur', `<span class="an-badge ${ms.trend === 'uptrend' ? 'bull' : ms.trend === 'downtrend' ? 'bear' : 'neut'}">${ms.trend.toUpperCase()}</span>`);
+  if (ms.hhCount !== undefined) {
+    html += anRow('HH / LH', `<span class="an-row-val green">${ms.hhCount} HH</span> <span class="an-row-val"> / </span><span class="an-row-val red">${ms.lhCount} LH</span>`);
+    html += anRow('HL / LL', `<span class="an-row-val green">${ms.hlCount} HL</span> <span class="an-row-val"> / </span><span class="an-row-val red">${ms.llCount} LL</span>`);
+  }
+  if (pd) {
+    const zCls = pd.zone === 'discount' ? 'bull' : pd.zone === 'premium' ? 'bear' : 'neut';
+    html += anRow('Zone', `<span class="an-badge ${zCls}">${pd.zone.toUpperCase()}</span>`);
+    html += anRow('Posisi di Range', `<span class="an-row-val ${pd.zone==='discount'?'green':pd.zone==='premium'?'red':''}">${pd.percentage}%</span>`);
+    html += anRow('Midpoint', `<span class="an-row-val blue">${_fmtPrice(pd.midpoint, _anSymbol)}</span>`);
+    if (pd.isOptimalBuy)  html += anRow('', `<span class="an-badge bull">✓ Optimal Buy Zone ≤38.2%</span>`);
+    if (pd.isOptimalSell) html += anRow('', `<span class="an-badge bear">✓ Optimal Sell Zone ≥61.8%</span>`);
+  }
+  if (liq) {
+    html += anRow('Equal Highs', `<span class="an-row-val red">${(liq.equalHighs||[]).length} zona</span>`);
+    html += anRow('Equal Lows', `<span class="an-row-val green">${(liq.equalLows||[]).length} zona</span>`);
+  }
+  if (el) el.innerHTML = html || '<div class="an-empty">Tidak ada data SMC</div>';
+}
+
+/* ═══ ICT ═══ */
+function anRenderICT(all, ohlcv) {
+  const el = _el('ict-body');
+  const badge = _el('ict-kz-badge');
+  if (!all) {
+    if (el) el.innerHTML = '<div class="an-empty">Data tidak tersedia</div>';
+    return;
+  }
+  const kz  = all.killzone || {};
+  const bias= all.icttBias || {};
+  const ote = all.ote || {};
+  const amd = all.amd || {};
+  const sb  = (window.Analysis && window.Analysis.ICT)
+              ? window.Analysis.ICT.detectSilverBullet() : {};
+
+  if (badge) {
+    badge.className = kz.isActive ? 'an-card-badge bullish' : 'an-card-badge neutral';
+    badge.textContent = kz.isActive ? `KZ AKTIF` : 'KZ OFF';
+  }
+
+  /* Killzone visual bar */
+  const kzNames = ['Asian KZ','London KZ','NY AM KZ','Silver Bullet'];
+  const kzBar = `<div class="kz-bar">${
+    kzNames.map(n => {
+      const isAct = kz.isActive && kz.name && kz.name.includes(n.split(' ')[0]);
+      return `<div class="kz-item${isAct?' active':''}">${n.replace(' KZ','').replace(' AM','')}</div>`;
+    }).join('')
+  }</div>`;
+
+  let html = kzBar;
+  html += anRow('Killzone', `<span class="an-row-val ${kz.isActive?'green':''}">${kz.name || '—'}</span>`);
+  if (!kz.isActive && kz.nextKillzone)
+    html += anRow('Berikutnya', `<span class="an-row-val blue">${kz.nextKillzone.name} (${kz.minutesUntilNext} mnt)</span>`);
+  html += anRow('Daily Bias', `<span class="an-badge ${bias.bias==='bullish'?'bull':bias.bias==='bearish'?'bear':'neut'}">${(bias.bias||'neutral').toUpperCase()}</span>`);
+  if (bias.reasons && bias.reasons.length)
+    html += anRow('Alasan', `<span class="an-row-val" style="font-size:0.65rem;text-align:right">${bias.reasons.slice(0,2).join(' · ')}</span>`);
+  html += anRow('Silver Bullet', `<span class="an-badge ${sb.isActive?'gold':'neut'}">${sb.isActive?`AKTIF (${sb.minutesLeft}m tersisa)`:sb.windowNY||'10:00-11:00 NY'}</span>`);
+
+  if (ote && ote.zone) {
+    html += `<div class="divider"></div>`;
+    html += anRow('OTE Zone', `<span class="an-badge ${ote.isActive?'gold':'neut'}">${ote.isActive?'AKTIF 62-79%':'DI LUAR ZONA'}</span>`);
+    html += anRow('OTE Range', `<span class="an-row-val gold">${_fmtPrice(ote.zone.bottom,_anSymbol)} – ${_fmtPrice(ote.zone.top,_anSymbol)}</span>`);
+  }
+  if (amd && amd.phase) {
+    html += `<div class="divider"></div>`;
+    const amdClsMap = { accumulation:'bull', markup:'bull', distribution:'bear', markdown:'bear', manipulation:'gold', manipulation_bull:'gold', manipulation_bear:'bear' };
+    const amdCls = amdClsMap[amd.phase] || 'neut';
+    html += anRow('AMD Phase', `<span class="an-badge ${amdCls}">${amd.phase.replace('_',' ').toUpperCase()}</span>`);
+    html += anRow('AMD Confidence', `<div class="conf-progress" style="width:100px">
+      <div class="conf-progress-track"><div class="conf-progress-fill" style="width:${amd.confidence||0}%;background:var(--accent-blue)"></div></div>
+      <span style="font-size:0.65rem;font-family:var(--font-mono);color:var(--text-muted)">${amd.confidence||0}%</span>
+    </div>`);
+  }
+  if (el) el.innerHTML = html;
+}
+
+/* ═══ FIBONACCI ═══ */
+function anRenderFibonacci(all) {
+  const el = _el('fib-body');
+  const badge = _el('fib-trend-badge');
+  if (!all || !all.fibonacci) {
+    if (el) el.innerHTML = '<div class="an-empty">Data swing tidak cukup untuk Fibonacci</div>';
+    return;
+  }
+  const fib = all.fibonacci;
+  if (badge) {
+    badge.className = `an-card-badge ${fib.trend === 'bullish' ? 'bullish' : 'bearish'}`;
+    badge.textContent = fib.trend === 'bullish' ? '↑ BULLISH' : '↓ BEARISH';
+  }
+
+  let html = '';
+  html += anRow('Swing High', `<span class="an-row-val red">${_fmtPrice(fib.swingHigh, _anSymbol)}</span>`);
+  html += anRow('Swing Low',  `<span class="an-row-val green">${_fmtPrice(fib.swingLow, _anSymbol)}</span>`);
+  html += anRow('Harga Saat Ini', `<span class="an-row-val blue">${_fmtPrice(fib.currentPrice, _anSymbol)}</span>`);
+  html += `<div class="divider"></div>`;
+
+  if (fib.retracement) {
+    html += `<table class="fib-table">`;
+    fib.retracement.forEach(r => {
+      const isNear = all.price && Math.abs(r.price - all.price) / all.price < 0.002;
+      const gpCls  = r.isGoldenPocket ? ' fib-gp' : '';
+      html += `<tr class="${gpCls}">
+        <td>${r.label}${r.isGoldenPocket ? ' 🟡' : ''}</td>
+        <td>${_fmtPrice(r.price, _anSymbol)}</td>
+        <td>${isNear ? '<span class="an-badge blue">DEKAT</span>' : r.isGoldenPocket ? '<span class="an-badge gold">GP</span>' : ''}</td>
+      </tr>`;
+    });
+    html += `</table>`;
+  }
+
+  if (el) el.innerHTML = html;
+}
+
+/* ═══ ORDER BLOCKS ═══ */
+function anRenderOrderBlocks(all) {
+  const el = _el('ob-body');
+  const badge = _el('ob-count-badge');
+  if (!all || !all.orderBlocks) {
+    if (el) el.innerHTML = '<div class="an-empty">—</div>';
+    return;
+  }
+  const obs = all.orderBlocks;
+  const active = obs.filter(o => !o.mitigated);
+  if (badge) badge.textContent = `${active.length} aktif`;
+  if (!obs.length) {
+    if (el) el.innerHTML = '<div class="an-empty">Tidak ada Order Block terdeteksi</div>';
+    return;
+  }
+  const html = `<div class="an-zone-list">${
+    obs.slice(-6).reverse().map(ob => {
+      const cls = ob.type === 'bullish' ? 'bull' : 'bear';
+      const status = ob.mitigated
+        ? '<span class="an-badge warn">MITIGATED</span>'
+        : `<span class="an-badge ${cls}">AKTIF</span>`;
+      return `<div class="an-zone-item ${cls}">
+        <span class="an-zone-type ${cls}">${ob.type === 'bullish' ? 'BULL' : 'BEAR'}</span>
+        <div class="an-zone-range">
+          <span class="an-zone-high">H: ${_fmtPrice(ob.high, _anSymbol)}</span>
+          <span class="an-zone-low">L: ${_fmtPrice(ob.low, _anSymbol)}</span>
+          <span class="an-zone-label">${ob.strength || 'moderate'}</span>
+        </div>
+        ${status}
+      </div>`;
+    }).join('')
+  }</div>`;
+  if (el) el.innerHTML = html;
+}
+
+/* ═══ FVG + Supply/Demand ═══ */
+function anRenderFVG(all) {
+  const el = _el('fvg-body');
+  const badge = _el('fvg-count-badge');
+  if (!all) { if (el) el.innerHTML = '<div class="an-empty">—</div>'; return; }
+
+  const fvgs = (all.fvg || []).filter(f => !f.filled);
+  const sd   = all.supplyDemand || {};
+  if (badge) badge.textContent = `${fvgs.length} FVG`;
+
+  let html = '';
+  if (fvgs.length) {
+    html += `<div style="font-size:0.66rem;font-weight:600;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Fair Value Gaps</div>`;
+    html += `<div class="an-zone-list">${
+      fvgs.slice(-4).reverse().map(f => {
+        const cls = f.type === 'bullish' ? 'bull' : 'bear';
+        return `<div class="an-zone-item ${cls}">
+          <span class="an-zone-type ${cls}">${f.type === 'bullish' ? 'BULL' : 'BEAR'}</span>
+          <div class="an-zone-range">
+            <span class="an-zone-high">H: ${_fmtPrice(f.top, _anSymbol)}</span>
+            <span class="an-zone-low">L: ${_fmtPrice(f.bottom, _anSymbol)}</span>
+            <span class="an-zone-label">${f.sizeInPips} pips</span>
+          </div>
+          <span class="an-badge ${cls}">UNFILLED</span>
+        </div>`;
+      }).join('')
+    }</div>`;
+  }
+
+  const supply = (sd.supply || []).filter(z => z.quality === 'fresh').slice(-2);
+  const demand = (sd.demand || []).filter(z => z.quality === 'fresh').slice(-2);
+  if (supply.length || demand.length) {
+    html += `<div class="divider"></div>`;
+    html += `<div style="font-size:0.66rem;font-weight:600;letter-spacing:0.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Supply/Demand (Fresh)</div>`;
+    html += `<div class="an-zone-list">`;
+    supply.forEach(z => {
+      html += `<div class="an-zone-item bear">
+        <span class="an-zone-type bear">SUPPLY</span>
+        <div class="an-zone-range">
+          <span class="an-zone-high">H: ${_fmtPrice(z.top, _anSymbol)}</span>
+          <span class="an-zone-low">L: ${_fmtPrice(z.bottom, _anSymbol)}</span>
+        </div>
+        <span class="an-badge fresh">FRESH</span>
+      </div>`;
+    });
+    demand.forEach(z => {
+      html += `<div class="an-zone-item bull">
+        <span class="an-zone-type bull">DEMAND</span>
+        <div class="an-zone-range">
+          <span class="an-zone-high">H: ${_fmtPrice(z.top, _anSymbol)}</span>
+          <span class="an-zone-low">L: ${_fmtPrice(z.bottom, _anSymbol)}</span>
+        </div>
+        <span class="an-badge fresh">FRESH</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (!html) html = '<div class="an-empty">Tidak ada FVG atau SD zone terdeteksi</div>';
+  if (el) el.innerHTML = html;
+}
+
+/* ═══ CANDLE PATTERNS ═══ */
+function anRenderCandlePatterns(all) {
+  const el = _el('cp-body');
+  const badge = _el('cp-count-badge');
+  if (!all || !all.patterns || !all.patterns.length) {
+    if (badge) badge.textContent = '0 pattern';
+    if (el) el.innerHTML = '<div class="an-empty">Tidak ada pola candlestick terdeteksi pada candle terbaru</div>';
+    return;
+  }
+  const pts = all.patterns;
+  if (badge) badge.textContent = `${pts.length} pattern`;
+  const html = pts.map(p => {
+    const cls = p.type === 'bullish' ? 'bull' : p.type === 'bearish' ? 'bear' : 'neut';
+    return `<div class="cp-item">
+      <span class="an-badge ${cls}">${p.type === 'bullish' ? '▲' : p.type === 'bearish' ? '▼' : '◈'}</span>
+      <span class="cp-name">${p.name}</span>
+      <span class="cp-acc">Acc: ${p.accuracy}%</span>
+      <span class="an-row-val blue" style="font-size:0.65rem">${_fmtPrice(p.price, _anSymbol)}</span>
+    </div>`;
+  }).join('');
+  if (el) el.innerHTML = `<div style="padding:0 0">${html}</div>`;
+}
+
+/* ═══ ELLIOTT WAVE ═══ */
+function anRenderElliott(all) {
+  const el = _el('ew-body');
+  const badge = _el('ew-badge');
+  if (!all || !all.elliott) {
+    if (el) el.innerHTML = '<div class="an-empty">Data tidak tersedia</div>';
+    return;
+  }
+  const ew = all.elliott;
+  if (badge) {
+    if (ew.isValid) {
+      badge.className = `an-card-badge ${ew.direction === 'bullish' ? 'bullish' : 'bearish'}`;
+      badge.textContent = `Wave ${ew.currentWave} ${ew.direction === 'bullish' ? '↑' : '↓'}`;
+    } else {
+      badge.className = 'an-card-badge neutral';
+      badge.textContent = 'BELUM KONFIRMASI';
+    }
+  }
+  let html = '';
+  if (!ew.isValid) {
+    html += `<div class="an-nodata-notice" style="margin-bottom:8px">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="var(--accent-gold)" stroke-width="1.2"/><line x1="7" y1="4" x2="7" y2="7.5" stroke="var(--accent-gold)" stroke-width="1.2" stroke-linecap="round"/><circle cx="7" cy="9.5" r="0.7" fill="var(--accent-gold)"/></svg>
+      ${ew.note || 'Pola 5-wave impulsive belum terkonfirmasi.'}
+    </div>`;
+    if (ew.structure) {
+      html += anRow('Struktur saat ini', `<span class="an-badge ${ew.structure.trend==='uptrend'?'bull':ew.structure.trend==='downtrend'?'bear':'neut'}">${ew.structure.trend.toUpperCase()}</span>`);
+    }
+    html += `<div style="font-size:0.68rem;color:var(--text-muted);margin-top:8px">Gunakan bersama SMC dan indikator lain untuk konfirmasi.</div>`;
+  } else {
+    html += anRow('Arah Wave', `<span class="an-badge ${ew.direction==='bullish'?'bull':'bear'}">${ew.direction.toUpperCase()}</span>`);
+    html += anRow('Wave saat ini', `<span class="an-row-val gold">Wave ${ew.currentWave}</span>`);
+    if (ew.waveLengths) {
+      const wl = ew.waveLengths;
+      html += `<div class="divider"></div>`;
+      html += `<div style="font-size:0.66rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Panjang Wave</div>`;
+      ['wave1','wave2','wave3','wave4','wave5'].forEach((w,i) => {
+        const isLongest = wl.wave3 === Math.max(wl.wave1, wl.wave3, wl.wave5);
+        const cls = (w === 'wave3' && isLongest) ? 'gold' : '';
+        html += anRow(`W${i+1}`, `<span class="an-row-val ${cls}">${_fmtPrice(wl[w], _anSymbol)}${w==='wave3'&&isLongest?' ⭐':''}</span>`);
+      });
+    }
+    if (ew.projection) {
+      html += `<div class="divider"></div>`;
+      html += `<div style="font-size:0.66rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Proyeksi ${ew.projection.type}</div>`;
+      html += anRow('Target 1', `<span class="an-row-val green">${_fmtPrice(ew.projection.target1, _anSymbol)}</span>`);
+      html += anRow('Target 2', `<span class="an-row-val green">${_fmtPrice(ew.projection.target2, _anSymbol)}</span>`);
+      html += anRow('Target 3', `<span class="an-row-val green">${_fmtPrice(ew.projection.target3, _anSymbol)}</span>`);
+    }
+  }
+  if (el) el.innerHTML = html;
+}
+
+/* ═══ WYCKOFF ═══ */
+function anRenderWyckoff(all) {
+  const el = _el('wyckoff-body');
+  const badge = _el('wyckoff-badge');
+  if (!all || !all.wyckoff) {
+    if (el) el.innerHTML = '<div class="an-empty">Data tidak tersedia</div>';
+    return;
+  }
+  const w = all.wyckoff;
+  const phaseMap = { accumulation:'bullish', markup:'bullish', distribution:'bearish', markdown:'bearish' };
+  const phaseCls = phaseMap[w.phase] || 'neutral';
+
+  if (badge) {
+    badge.className = `an-card-badge ${phaseCls}`;
+    badge.textContent = (w.phase || '—').toUpperCase();
+  }
+
+  const phaseNames = ['ACCUMULATION','MARKUP','DISTRIBUTION','MARKDOWN'];
+  const phaseClsMap = {
+    accumulation: 'active-acc', markup: 'active-mark',
+    distribution: 'active-dist', markdown: 'active-mdown'
+  };
+  const phaseBar = `<div class="wyckoff-phases">${
+    phaseNames.map(p => {
+      const key = p.toLowerCase();
+      const isActive = w.phase && w.phase.toLowerCase() === key;
+      return `<div class="wyckoff-phase-btn${isActive?' '+phaseClsMap[key]:''}">${p.slice(0,4)}</div>`;
+    }).join('')
+  }</div>`;
+
+  let html = phaseBar;
+  html += anRow('Phase', `<span class="an-badge ${phaseCls==='bullish'?'bull':phaseCls==='bearish'?'bear':'neut'}">${(w.phase||'unknown').toUpperCase()} – ${w.subPhase||'?'}</span>`);
+  const wConfColor = phaseCls==='bullish' ? 'var(--accent-green)' : phaseCls==='bearish' ? 'var(--accent-red)' : 'var(--accent-blue)';
+  html += anRow('Confidence', `<div class="conf-progress" style="width:120px">
+    <div class="conf-progress-track"><div class="conf-progress-fill" style="width:${w.confidence||0}%;background:${wConfColor}"></div></div>
+    <span style="font-size:0.65rem;font-family:var(--font-mono);color:var(--text-muted)">${w.confidence||0}%</span>
+  </div>`);
+  html += anRow('Vol Trend', `<span class="an-badge ${w.volTrend==='increasing'?'bull':w.volTrend==='decreasing'?'bear':'neut'}">${(w.volTrend||'flat').toUpperCase()}</span>`);
+  if (w.events && w.events.length) {
+    html += `<div class="divider"></div>`;
+    html += `<div style="font-size:0.66rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Events Terdeteksi</div>`;
+    w.events.forEach(evt => {
+      html += `<div style="font-size:0.7rem;color:var(--text-secondary);padding:3px 0;border-bottom:1px solid rgba(48,54,61,0.4)">· ${evt}</div>`;
+    });
+  }
+  if (w.recommendation) {
+    html += `<div class="divider"></div>`;
+    html += `<div style="font-size:0.7rem;color:var(--accent-gold);background:var(--accent-gold-dim);border:1px solid rgba(255,215,0,0.2);border-radius:var(--radius-sm);padding:8px 10px;line-height:1.4">${w.recommendation}</div>`;
+  }
+  if (el) el.innerHTML = html;
+}
+
+/* ═══ HARMONIC ═══ */
+function anRenderHarmonic(all) {
+  const el = _el('harm-body');
+  const badge = _el('harm-count-badge');
+  if (!all || !all.harmonic || !all.harmonic.length) {
+    if (badge) badge.textContent = '0 pattern';
+    if (el) el.innerHTML = '<div class="an-empty">Tidak ada pola Harmonic terdeteksi</div>';
+    return;
+  }
+  const patterns = all.harmonic;
+  if (badge) badge.textContent = `${patterns.length} pattern`;
+  const html = patterns.map(p => {
+    const dirCls = p.direction === 'bullish' ? 'bull' : 'bear';
+    const activeCls = p.isActive ? `background:${p.direction==='bullish'?'var(--accent-green-dim)':'var(--accent-red-dim)'};border-color:${p.direction==='bullish'?'rgba(0,208,132,0.3)':'rgba(255,71,87,0.3)'};` : '';
+    return `<div class="harmonic-pattern-item" style="${activeCls}">
+      <div class="hp-row">
+        <span class="hp-name">${p.name}
+          <span class="an-badge ${dirCls}" style="margin-left:6px">${p.direction === 'bullish' ? '▲ BULL' : '▼ BEAR'}</span>
+          ${p.isActive ? '<span class="an-badge gold" style="margin-left:4px">PRZ AKTIF</span>' : ''}
+        </span>
+        <span class="an-badge neut">${p.confidence}%</span>
+      </div>
+      <div class="hp-row">
+        <span style="font-size:0.65rem;color:var(--text-muted)">PRZ: ${_fmtPrice(p.PRZ.bottom,_anSymbol)} – ${_fmtPrice(p.PRZ.top,_anSymbol)}</span>
+      </div>
+      <div class="hp-ratios">
+        ${(p.checks||[]).map(c => `<span class="hp-ratio" style="color:${c.ok?'var(--accent-green)':'var(--text-muted)'}">${c.key}: ${c.ratio}</span>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  if (el) el.innerHTML = html;
+}
+
+/* ═══ MARKET STRUCTURE ═══ */
+function anRenderMarketStructure(all) {
+  const el = _el('ms-body');
+  const badge = _el('ms-badge');
+  if (!all || !all.structure) {
+    if (el) el.innerHTML = '<div class="an-empty">Data tidak tersedia</div>';
+    return;
+  }
+  const ms = all.structure;
+  const bos = (all.bos || []).slice(-4);
+  const choch = (all.choch || []).slice(-2);
+  const bb = (all.breakerBlocks || []);
+
+  if (badge) {
+    badge.className = `an-card-badge ${ms.trend==='uptrend'?'bullish':ms.trend==='downtrend'?'bearish':'neutral'}`;
+    badge.textContent = ms.trend.toUpperCase();
+  }
+
+  let html = '';
+  if (bos.length) {
+    html += `<div style="font-size:0.66rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">BOS / Breaks of Structure</div>`;
+    html += `<div class="an-zone-list">${
+      bos.reverse().map(b => {
+        const cls = b.type === 'bullish' ? 'bull' : 'bear';
+        return `<div class="an-zone-item ${cls}">
+          <span class="an-zone-type ${cls}">${b.label || b.type.toUpperCase()}</span>
+          <div class="an-zone-range">
+            <span class="an-zone-high" style="color:var(--text-primary)">${_fmtPrice(b.price, _anSymbol)}</span>
+          </div>
+          <span class="an-badge ${cls}">${b.type === 'bullish' ? '▲ BOS' : '▼ BOS'}</span>
+        </div>`;
+      }).join('')
+    }</div>`;
+  }
+  if (choch.length) {
+    html += `<div class="divider"></div>`;
+    html += `<div style="font-size:0.66rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">CHoCH</div>`;
+    html += choch.map(c => {
+      const cls = c.type === 'bullish' ? 'bull' : 'bear';
+      return `<div style="font-size:0.7rem;padding:4px 0;border-bottom:1px solid rgba(48,54,61,0.4);display:flex;justify-content:space-between">
+        <span class="an-badge ${cls}">${c.label || 'CHoCH'}</span>
+        <span style="font-family:var(--font-mono);color:var(--text-secondary)">${_fmtPrice(c.price, _anSymbol)}</span>
+      </div>`;
+    }).join('');
+  }
+  if (!bos.length && !choch.length)
+    html = '<div class="an-empty">Tidak ada BOS/CHoCH terdeteksi</div>';
+
+  /* Swing Points terbaru */
+  const recentHighs = (ms.highs || []).slice(-3);
+  const recentLows  = (ms.lows  || []).slice(-3);
+  if (recentHighs.length || recentLows.length) {
+    html += `<div class="divider"></div>`;
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">`;
+    if (recentHighs.length) {
+      html += `<div><div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px">SWING HIGHS</div>`;
+      recentHighs.reverse().forEach(h => {
+        html += `<div style="font-size:0.68rem;color:var(--accent-red);font-family:var(--font-mono);padding:2px 0">${_fmtPrice(h.price,_anSymbol)} <span style="color:var(--text-muted);font-family:var(--font-sans)">${h.type||''}</span></div>`;
+      });
+      html += `</div>`;
+    }
+    if (recentLows.length) {
+      html += `<div><div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px">SWING LOWS</div>`;
+      recentLows.reverse().forEach(l => {
+        html += `<div style="font-size:0.68rem;color:var(--accent-green);font-family:var(--font-mono);padding:2px 0">${_fmtPrice(l.price,_anSymbol)} <span style="color:var(--text-muted);font-family:var(--font-sans)">${l.type||''}</span></div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+  if (el) el.innerHTML = html;
+}
+
+/* ═══ MULTI-TIMEFRAME ═══ */
+function anRenderMTF(mtf) {
+  const tbody = _el('mtf-tbody');
+  const alignBadge = _el('mtf-align-badge');
+  const biasBadge  = _el('mtf-bias-badge');
+  const rec        = _el('mtf-recommendation');
+
+  if (!mtf || !mtf.timeframes) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="9" class="an-empty">Data MTF tidak tersedia</td></tr>`;
+    return;
+  }
+
+  if (alignBadge) alignBadge.textContent = `Alignment: ${mtf.alignmentScore}%`;
+  if (biasBadge) {
+    biasBadge.className = `an-badge ${mtf.overallBias==='bullish'?'bull':mtf.overallBias==='bearish'?'bear':'neut'}`;
+    biasBadge.textContent = `Bias: ${mtf.overallBias.toUpperCase()}`;
+  }
+  if (rec) rec.textContent = mtf.recommendation || '';
+
+  const rows = mtf.timeframes.map(tf => {
+    if (!tf.hasData) {
+      return `<tr>
+        <td><span class="mtf-tf-label">${tf.label}</span></td>
+        <td colspan="8"><span class="mtf-no-data">Belum dimuat — buka TF ini di Chart</span></td>
+      </tr>`;
+    }
+    const sig    = tf.signal || 'neutral';
+    const trend  = tf.trend || '—';
+    const trendCls = trend === 'uptrend' ? 'bull' : trend === 'downtrend' ? 'bear' : 'neut';
+    const sigCls   = sig === 'buy' ? 'bull' : sig === 'sell' ? 'bear' : 'neut';
+    const conf     = tf.confluence || 0;
+
+    const pd = tf.smc && tf.smc.premiumDiscount;
+    const pdStr = pd ? `<span class="an-badge ${pd.zone==='discount'?'bull':pd.zone==='premium'?'bear':'neut'}" style="font-size:0.6rem">${pd.zone.toUpperCase()}</span>` : '—';
+
+    const fibTrend = tf.fib ? `<span class="an-badge ${tf.fib.trend==='bullish'?'bull':'bear'}" style="font-size:0.6rem">${tf.fib.trend.slice(0,4).toUpperCase()}</span>` : '—';
+
+    const ind = tf.indicators;
+    const rsiVal  = ind && ind.rsi  ? `${ind.rsi.value || '—'} <span class="an-badge ${ind.rsi.signal === 'BUY' ? 'bull' : ind.rsi.signal === 'SELL' ? 'bear' : 'neut'}" style="font-size:0.58rem">${ind.rsi.signal}</span>` : '—';
+    const macdSig = ind && ind.macd ? `<span class="an-badge ${ind.macd.signal === 'BUY' ? 'bull' : ind.macd.signal === 'SELL' ? 'bear' : 'neut'}" style="font-size:0.58rem">${ind.macd.signal}</span>` : '—';
+
+    const confBar = `<div class="mtf-conf-bar">
+      <div class="mtf-conf-track"><div class="mtf-conf-fill ${sig}" style="width:${Math.min((conf/20)*100,100)}%"></div></div>
+      <span style="font-size:0.65rem;font-family:var(--font-mono)">${conf}/20</span>
+    </div>`;
+
+    return `<tr>
+      <td><span class="mtf-tf-label">${tf.label}</span></td>
+      <td><span class="an-badge ${trendCls}" style="font-size:0.62rem">${trend.replace('trend','').toUpperCase()}</span></td>
+      <td><span class="mtf-signal-dot ${sig}"></span><span class="an-badge ${sigCls}" style="font-size:0.62rem">${sig.toUpperCase()}</span></td>
+      <td>${confBar}</td>
+      <td>${pdStr}</td>
+      <td>${fibTrend}</td>
+      <td style="font-size:0.7rem">${rsiVal}</td>
+      <td>${macdSig}</td>
+      <td style="font-size:0.65rem;color:var(--text-muted)">${tf.strength ? tf.strength.toUpperCase() : '—'}</td>
+    </tr>`;
+  });
+  if (tbody) tbody.innerHTML = rows.join('');
+}
+
+/* ═══ INDICATOR SUMMARY ═══ */
+function anRenderIndicatorSummary(indsum) {
+  if (!indsum) return;
+
+  const overall = indsum.overall;
+  if (overall) {
+    const dirEl = _el('indsum-dir');
+    const scoEl = _el('indsum-score');
+    if (dirEl) {
+      const cls = overall.direction.toLowerCase().replace(' ','-');
+      dirEl.className = `indsum-dir ${cls}`;
+      dirEl.textContent = overall.direction;
+    }
+    if (scoEl) scoEl.textContent = `${overall.buyCount}B · ${overall.neutralCount}N · ${overall.sellCount}S`;
+  }
+
+  const cats = ['trend','momentum','volume','volatility'];
+  cats.forEach(cat => {
+    const data = indsum[cat];
+    if (!data) return;
+    const tabEl = _el(`ind-tab-${cat}`);
+    if (!tabEl) return;
+    if (!data.signals || !data.signals.length) {
+      tabEl.innerHTML = '<div class="an-empty">Tidak ada sinyal</div>';
+      return;
+    }
+    const rows = data.signals.map(s => {
+      const sig = s.signal || 'NEUTRAL';
+      const valStr = typeof s.value === 'object'
+        ? Object.entries(s.value).map(([k,v]) => `${k}:${v}`).join(' ')
+        : (s.value !== null && s.value !== undefined ? String(s.value) : '');
+      return `<div class="indsum-row">
+        <div class="indsig-dot ${sig}"></div>
+        <span class="indsig-name">${s.name}</span>
+        <span class="indsig-val" title="${valStr}">${valStr.slice(0,20)}</span>
+        <span class="indsig-badge ${sig}">${sig}</span>
+      </div>
+      ${s.note ? `<div style="font-size:0.65rem;color:var(--text-muted);padding:0 18px 4px 44px">${s.note}</div>` : ''}`;
+    }).join('');
+    tabEl.innerHTML = rows;
+
+    /* Count badges for trend tab */
+    if (cat === 'trend') {
+      const b = _el('indsig-trend-buy');  if(b) b.textContent = data.count_buy  || 0;
+      const n = _el('indsig-trend-neu');  if(n) n.textContent = data.count_neutral||0;
+      const s = _el('indsig-trend-sell'); if(s) s.textContent = data.count_sell ||0;
+    }
+  });
+}
+
+/* ─── TAB SWITCH ─── */
+window.anSwitchIndTab = function(tab, btn) {
+  document.querySelectorAll('.indsum-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.indsum-tab-content').forEach(c => c.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const content = _el(`ind-tab-${tab}`);
+  if (content) content.classList.add('active');
+
+  const countBar = _el('indsig-count-bar-trend');
+  if (countBar && _anLastResult && _anLastResult.indsum) {
+    const data = _anLastResult.indsum[tab];
+    if (data) {
+      const b = _el('indsig-trend-buy');  if(b) b.textContent = data.count_buy     || 0;
+      const n = _el('indsig-trend-neu');  if(n) n.textContent = data.count_neutral  || 0;
+      const s = _el('indsig-trend-sell'); if(s) s.textContent = data.count_sell     || 0;
+    }
+  }
+};
+
+/* ─── HELPER: Render row ─── */
+function anRow(label, valueHtml) {
+  if (!label) return `<div style="padding:3px 0">${valueHtml}</div>`;
+  return `<div class="an-row">
+    <span class="an-row-label">${label}</span>
+    <span>${valueHtml}</span>
+  </div>`;
+}
+
+/* ─── INIT ─── */
+function anInit() {
+  anBuildSymbolList();
+  const tfSel = _el('an-tf-select');
+  if (tfSel) {
+    tfSel.value = _anTF;
+    if (!tfSel.value) { tfSel.value = 'H1'; _anTF = 'H1'; }
+  }
+  /* Auto run jika ada data */
+  setTimeout(() => {
+    const ohlcv = _getOHLCV(_anSymbol, _anTF);
+    if (ohlcv && ohlcv.length >= 30) anRunAnalysis();
+  }, 400);
+}
+
+anInit();
+
+})(); // end IIFE
+</script>

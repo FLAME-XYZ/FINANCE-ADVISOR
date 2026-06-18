@@ -1,0 +1,1167 @@
+<!-- ═══════════════════════════════════════════════════════════════
+     ProTrader Analytics — chart.html (v4.0 TradingView Widget)
+     Chart grafik candle: TradingView Widget (tidak perlu library)
+     Harga live & indikator: Binance + ExchangeRate-API
+     ═══════════════════════════════════════════════════════════════ -->
+<style>
+/* ════════ CHART PAGE LAYOUT ════════ */
+.chart-page {
+  display: flex; flex-direction: column;
+  height: calc(100vh - var(--topbar-height, 44px) - 40px);
+  min-height: 500px; overflow: hidden; animation: fadeIn 0.2s ease;
+}
+
+/* ════════ TOOLBAR ════════ */
+.ct-toolbar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  padding: 8px 14px; background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color); flex-shrink: 0;
+}
+.ct-sep { width: 1px; height: 18px; background: var(--border-color); flex-shrink: 0; margin: 0 2px; }
+
+/* Instrument Select */
+.ct-instrument {
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  color: var(--text-primary); font-family: var(--font-mono); font-size: 0.78rem;
+  font-weight: 600; padding: 5px 26px 5px 10px; border-radius: var(--radius);
+  cursor: pointer; outline: none; min-width: 130px;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237d8590' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+  transition: border-color 0.2s;
+}
+.ct-instrument:focus { border-color: var(--accent-blue); }
+
+/* TF & toggle buttons */
+.ct-btn {
+  padding: 4px 9px; border-radius: var(--radius-sm); font-size: 0.72rem;
+  font-weight: 600; font-family: var(--font-mono); color: var(--text-secondary);
+  background: transparent; border: 1px solid transparent;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.ct-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+.ct-btn.tf-active { color: var(--accent-blue); background: var(--accent-blue-dim); border-color: rgba(77,171,247,0.3); }
+.ct-btn.ov-active { color: var(--accent-gold); background: var(--accent-gold-dim); border-color: rgba(255,215,0,0.3); }
+.ct-btn.pn-active { color: var(--accent-green); background: var(--accent-green-dim); border-color: rgba(0,208,132,0.3); }
+.ct-btn.tl-active { color: var(--accent-purple); background: rgba(184,146,255,0.12); border-color: rgba(184,146,255,0.3); }
+
+/* ════════ BODY ════════ */
+.ct-body {
+  display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden;
+}
+
+/* ════════ CHART AREA ════════ */
+.ct-chart-area {
+  display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0;
+  overflow: hidden; position: relative;
+}
+
+/* Price bar */
+.ct-price-bar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  padding: 5px 12px; background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color); flex-shrink: 0;
+}
+.ct-pb-sym   { font-family: var(--font-mono); font-weight: 700; font-size: 0.84rem; }
+.ct-pb-price { font-family: var(--font-mono); font-weight: 700; font-size: 1.05rem; color: var(--text-primary); transition: color 0.3s; }
+.ct-pb-chg   { font-family: var(--font-mono); font-size: 0.76rem; font-weight: 600; }
+.ct-pb-chg.up { color: var(--accent-green); }
+.ct-pb-chg.dn { color: var(--accent-red); }
+.ct-pb-ohlcv { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); display: flex; gap: 8px; flex-wrap: wrap; }
+.ct-pb-time  { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); margin-left: auto; }
+.ct-pb-badge {
+  font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 3px;
+  font-family: var(--font-mono);
+}
+.ct-pb-badge.live { background: rgba(0,208,132,0.15); color: var(--accent-green); border: 1px solid rgba(0,208,132,0.25); }
+
+/* ════════ TRADINGVIEW WIDGET WRAPPER ════════ */
+.ct-tv-outer {
+  flex: 1; position: relative;
+  background: var(--bg-primary);
+  /* min-height penting agar flex child tidak collapse ke 0 */
+  min-height: 300px;
+  /* overflow visible agar iframe tidak terpotong */
+  overflow: visible;
+}
+/* iframe TradingView — isi penuh parent */
+#ct-tv-iframe {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100%; height: 100%;
+  border: none; display: block;
+  min-height: 300px;
+}
+/* ct-tv-container untuk JS widget method */
+#ct-tv-container {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100%; height: 100%;
+  min-height: 300px;
+}
+/* Hilangkan loading dulu (langsung load widget) */
+.ct-tv-loading {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px;
+  background: var(--bg-primary); z-index: 20;
+  pointer-events: none; transition: opacity 0.4s;
+}
+.ct-tv-loading.hidden { opacity: 0; pointer-events: none; }
+.ct-tv-loading-ring {
+  width: 36px; height: 36px; border: 3px solid var(--border-color);
+  border-top-color: var(--accent-blue); border-radius: 50%;
+  animation: ct-spin 0.8s linear infinite;
+}
+@keyframes ct-spin { to { transform: rotate(360deg); } }
+.ct-tv-loading-msg { font-size: 0.78rem; color: var(--text-secondary); }
+
+/* Error state */
+.ct-error {
+  position: absolute; inset: 0; display: none; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px;
+  background: var(--bg-primary); z-index: 20; padding: 20px; text-align: center;
+}
+.ct-error.show { display: flex; }
+.ct-error-icon { font-size: 2rem; }
+.ct-error-msg  { font-size: 0.8rem; color: var(--text-secondary); max-width: 300px; }
+.ct-error-retry { padding: 7px 16px; background: var(--accent-blue-dim); color: var(--accent-blue); border: 1px solid rgba(77,171,247,0.3); border-radius: var(--radius); font-size: 0.78rem; cursor: pointer; font-weight: 600; }
+.ct-error-retry:hover { background: rgba(77,171,247,0.25); }
+
+/* ════════ INDICATOR PANEL ════════ */
+.ct-ind-panel {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 8px 10px; background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0; overflow-y: auto; max-height: 220px;
+}
+
+/* Signal Meter */
+.ct-signal-meter {
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: var(--radius); padding: 8px 12px;
+  min-width: 160px; flex: 0 0 auto;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.ct-signal-lbl { font-size: 0.63rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600; margin-bottom: 6px; }
+.ct-signal-bar {
+  height: 6px;
+  background: linear-gradient(to right, #ff4757 0%, #ff9f43 25%, #7d8590 50%, #4dabf7 75%, #00d084 100%);
+  border-radius: 4px; position: relative; margin-bottom: 4px;
+}
+.ct-signal-needle {
+  position: absolute; top: -4px; width: 3px; height: 14px;
+  background: white; border-radius: 2px; transform: translateX(-50%);
+  box-shadow: 0 0 4px rgba(0,0,0,0.5); transition: left 0.6s cubic-bezier(.34,1.56,.64,1);
+}
+.ct-signal-ticks {
+  display: flex; justify-content: space-between;
+  font-size: 0.54rem; color: var(--text-muted); font-family: var(--font-mono);
+}
+.ct-signal-result {
+  text-align: center; font-weight: 700; font-size: 0.74rem;
+  font-family: var(--font-mono); margin-top: 4px; transition: color 0.4s;
+}
+
+/* Ind Cards */
+.ct-card {
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: var(--radius); overflow: hidden; flex: 1 1 160px; min-width: 140px; max-width: 280px;
+}
+.ct-card-head {
+  display: flex; align-items: center; gap: 5px; padding: 5px 8px;
+  border-bottom: 1px solid var(--border-color); cursor: pointer; user-select: none;
+  font-size: 0.63rem; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  transition: background 0.15s;
+}
+.ct-card-head:hover { background: var(--bg-hover); }
+.ct-card-arrow { margin-left: auto; flex-shrink: 0; transition: transform 0.2s; }
+.ct-card-body  { padding: 5px 8px; }
+.ct-card-body.hide { display: none; }
+
+/* Indicator rows */
+.ct-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 4px; padding: 2px 0; border-bottom: 1px solid rgba(48,54,61,0.35);
+}
+.ct-row:last-child { border-bottom: none; }
+.ct-row-lbl { font-size: 0.63rem; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
+.ct-row-val { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 600; color: var(--text-primary); text-align: right; flex: 1; }
+.ct-badge {
+  padding: 1px 4px; border-radius: 3px; font-size: 0.58rem;
+  font-weight: 700; font-family: var(--font-mono); white-space: nowrap; flex-shrink: 0;
+}
+.ct-buy  { background: var(--accent-green-dim); color: var(--accent-green); border: 1px solid rgba(0,208,132,0.2); }
+.ct-sell { background: var(--accent-red-dim);   color: var(--accent-red);   border: 1px solid rgba(255,71,87,0.2); }
+.ct-neu  { background: var(--bg-hover);         color: var(--text-muted);   border: 1px solid var(--border-color); }
+
+/* RSI mini gauge */
+.ct-rsi-wrap  { display: flex; align-items: center; gap: 3px; }
+.ct-rsi-bar   { width: 40px; height: 4px; background: var(--border-color); border-radius: 2px; position: relative; flex-shrink: 0; }
+.ct-rsi-fill  { height: 100%; border-radius: 2px; transition: width 0.5s; }
+.ct-rsi-dot   { position: absolute; top: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--text-primary); transform: translateX(-50%); border: 2px solid var(--bg-card); transition: left 0.5s; }
+
+/* Pivot grid */
+.ct-pivot-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; margin-top: 3px; }
+.ct-pivot-cell { background: var(--bg-primary); border-radius: var(--radius-sm); padding: 2px 4px; text-align: center; }
+.ct-pivot-cell .pl { font-size: 0.54rem; color: var(--text-muted); }
+.ct-pivot-cell .pv { font-family: var(--font-mono); font-size: 0.62rem; font-weight: 600; }
+.ct-pivot-pp .pv { color: var(--accent-blue); }
+.ct-pivot-r  .pv { color: var(--accent-red); }
+.ct-pivot-s  .pv { color: var(--accent-green); }
+
+/* Flash animations */
+.ct-flash-up { animation: ct-fup 0.6s ease; }
+.ct-flash-dn { animation: ct-fdn 0.6s ease; }
+@keyframes ct-fup { 0% { color: var(--accent-green); } 100% { color: var(--text-primary); } }
+@keyframes ct-fdn { 0% { color: var(--accent-red);   } 100% { color: var(--text-primary); } }
+
+/* ════════ RESPONSIVE ════════ */
+@media (max-width: 900px) {
+  .ct-ind-panel { max-height: 260px; }
+  .ct-card { flex: 1 1 130px; }
+}
+@media (max-width: 600px) {
+  .ct-ind-panel { max-height: 300px; gap: 4px; padding: 6px 6px; }
+  .ct-card { flex: 1 1 calc(50% - 4px); max-width: 100%; }
+  .ct-signal-meter { flex: 1 1 100%; max-width: 100%; }
+  .ct-toolbar { gap: 4px; padding: 6px 8px; }
+}
+</style>
+
+<!-- ══════════════════ CHART PAGE ══════════════════ -->
+<div class="chart-page" id="ct-page">
+
+  <!-- TOOLBAR -->
+  <div class="ct-toolbar">
+    <!-- Instrument -->
+    <select class="ct-instrument" id="ct-instrument">
+      <optgroup label="── CRYPTO ──">
+        <option value="BTCUSDT">BTC/USDT</option>
+        <option value="ETHUSDT">ETH/USDT</option>
+        <option value="BNBUSDT">BNB/USDT</option>
+        <option value="SOLUSDT">SOL/USDT</option>
+        <option value="XRPUSDT">XRP/USDT</option>
+        <option value="ADAUSDT">ADA/USDT</option>
+        <option value="DOGEUSDT">DOGE/USDT</option>
+        <option value="AVAXUSDT">AVAX/USDT</option>
+        <option value="LINKUSDT">LINK/USDT</option>
+        <option value="DOTUSDT">DOT/USDT</option>
+        <option value="LTCUSDT">LTC/USDT</option>
+      </optgroup>
+      <optgroup label="── METALS ──">
+        <option value="XAUTUSDT">XAU/USDT (Gold)</option>
+        <option value="XAGUSDT">XAG/USDT (Silver)</option>
+      </optgroup>
+      <optgroup label="── FOREX ──">
+        <option value="EURUSD">EUR/USD</option>
+        <option value="GBPUSD">GBP/USD</option>
+        <option value="USDJPY">USD/JPY</option>
+        <option value="AUDUSD">AUD/USD</option>
+        <option value="USDCAD">USD/CAD</option>
+        <option value="NZDUSD">NZD/USD</option>
+        <option value="GBPJPY">GBP/JPY</option>
+        <option value="EURJPY">EUR/JPY</option>
+      </optgroup>
+    </select>
+
+    <div class="ct-sep"></div>
+
+    <!-- Timeframes -->
+    <div id="ct-tf-group" style="display:flex;gap:2px">
+      <button class="ct-btn" data-tf="1"   onclick="ctSetTF('1')">M1</button>
+      <button class="ct-btn" data-tf="5"   onclick="ctSetTF('5')">M5</button>
+      <button class="ct-btn" data-tf="15"  onclick="ctSetTF('15')">M15</button>
+      <button class="ct-btn" data-tf="30"  onclick="ctSetTF('30')">M30</button>
+      <button class="ct-btn tf-active" data-tf="60"  onclick="ctSetTF('60')">H1</button>
+      <button class="ct-btn" data-tf="240" onclick="ctSetTF('240')">H4</button>
+      <button class="ct-btn" data-tf="D"   onclick="ctSetTF('D')">D1</button>
+      <button class="ct-btn" data-tf="W"   onclick="ctSetTF('W')">W1</button>
+    </div>
+
+    <div class="ct-sep"></div>
+
+    <!-- Info -->
+    <span style="font-size:0.65rem;color:var(--text-muted);">CHART TRADINGVIEW · BINANCE PRICE</span>
+
+    <!-- Refresh -->
+    <button class="ct-btn" id="ct-refresh" onclick="ctRefresh()" style="margin-left:auto" title="Refresh Indikator">
+      <svg id="ct-ref-icon" width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M10 6A4 4 0 1 1 6 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <polyline points="6,2 9,2 9,5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- BODY -->
+  <div class="ct-body">
+
+    <!-- CHART AREA -->
+    <div class="ct-chart-area">
+
+      <!-- Price Bar -->
+      <div class="ct-price-bar" id="ct-price-bar">
+        <span class="ct-pb-sym" id="ct-sym">BTC/USDT</span>
+        <span class="ct-pb-price" id="ct-price">—</span>
+        <span class="ct-pb-chg" id="ct-chg">—</span>
+        <span class="ct-pb-badge live">● LIVE</span>
+        <span class="ct-pb-ohlcv">
+          <span id="ct-o">O:—</span>
+          <span id="ct-h">H:—</span>
+          <span id="ct-l">L:—</span>
+          <span id="ct-v">Vol:—</span>
+        </span>
+        <span class="ct-pb-time" id="ct-time"></span>
+      </div>
+
+      <!-- TradingView Widget Container -->
+      <div class="ct-tv-outer" id="ct-tv-outer">
+        <!-- Loading awal -->
+        <div class="ct-tv-loading" id="ct-tv-loading">
+          <div class="ct-tv-loading-ring"></div>
+          <span class="ct-tv-loading-msg" id="ct-tv-load-msg">Memuat TradingView Chart...</span>
+        </div>
+        <!-- Error fallback -->
+        <div class="ct-error" id="ct-error">
+          <div class="ct-error-icon">⚠️</div>
+          <div class="ct-error-msg" id="ct-err-msg">Chart tidak bisa dimuat. Periksa koneksi internet.</div>
+          <button class="ct-error-retry" onclick="ctReloadTV()">Coba Lagi</button>
+        </div>
+        <!-- TradingView Embed iframe — paling reliable, tidak butuh script eksternal -->
+        <iframe id="ct-tv-iframe"
+          src="about:blank"
+          allowtransparency="true"
+          allowfullscreen=""
+          frameborder="0"
+          scrolling="no">
+        </iframe>
+      </div>
+
+    </div><!-- /ct-chart-area -->
+
+    <!-- INDICATOR PANEL -->
+    <div class="ct-ind-panel" id="ct-ind-panel">
+
+      <!-- Signal Meter -->
+      <div class="ct-signal-meter">
+        <div class="ct-signal-lbl">Signal Overall</div>
+        <div class="ct-signal-bar">
+          <div class="ct-signal-needle" id="ct-needle" style="left:50%"></div>
+        </div>
+        <div class="ct-signal-ticks">
+          <span>S.SELL</span><span>SELL</span><span>NEU</span><span>BUY</span><span>S.BUY</span>
+        </div>
+        <div class="ct-signal-result" id="ct-sig-result">NEUTRAL</div>
+      </div>
+
+      <!-- TREND -->
+      <div class="ct-card" id="ctc-trend">
+        <div class="ct-card-head" onclick="ctToggleCard('ctc-trend')">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><polyline points="1,8 3.5,4.5 6,6.5 10,1.5" stroke="var(--accent-green)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          TREND
+          <svg class="ct-card-arrow" width="9" height="9" viewBox="0 0 9 9" fill="none"><polyline points="1.5,3 4.5,6.5 7.5,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </div>
+        <div class="ct-card-body" id="ctb-trend">
+          <div class="ct-row"><span class="ct-row-lbl">EMA 20</span><span class="ct-row-val" id="ct-ema20">—</span><span class="ct-badge ct-neu" id="ct-ema20-s">—</span></div>
+          <div class="ct-row"><span class="ct-row-lbl">EMA 50</span><span class="ct-row-val" id="ct-ema50">—</span><span class="ct-badge ct-neu" id="ct-ema50-s">—</span></div>
+          <div class="ct-row"><span class="ct-row-lbl">EMA 200</span><span class="ct-row-val" id="ct-ema200">—</span><span class="ct-badge ct-neu" id="ct-ema200-s">—</span></div>
+          <div class="ct-row"><span class="ct-row-lbl">MACD</span><span class="ct-row-val" id="ct-macd">—</span><span class="ct-badge ct-neu" id="ct-macd-s">—</span></div>
+          <div class="ct-row"><span class="ct-row-lbl">BB Width</span><span class="ct-row-val" id="ct-bbw">—</span><span class="ct-badge ct-neu" id="ct-bb-s">—</span></div>
+        </div>
+      </div>
+
+      <!-- MOMENTUM -->
+      <div class="ct-card" id="ctc-mom">
+        <div class="ct-card-head" onclick="ctToggleCard('ctc-mom')">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="var(--accent-blue)" stroke-width="1.4"/><path d="M5.5 3V5.5L7.5 7" stroke="var(--accent-blue)" stroke-width="1.3" stroke-linecap="round"/></svg>
+          MOMENTUM
+          <svg class="ct-card-arrow" width="9" height="9" viewBox="0 0 9 9" fill="none"><polyline points="1.5,3 4.5,6.5 7.5,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </div>
+        <div class="ct-card-body" id="ctb-mom">
+          <div class="ct-row">
+            <span class="ct-row-lbl">RSI(14)</span>
+            <div class="ct-rsi-wrap">
+              <div class="ct-rsi-bar"><div class="ct-rsi-fill" id="ct-rsi-fill" style="width:50%;background:var(--text-muted)"></div><div class="ct-rsi-dot" id="ct-rsi-dot" style="left:50%"></div></div>
+              <span class="ct-row-val" id="ct-rsi" style="min-width:28px">—</span>
+            </div>
+            <span class="ct-badge ct-neu" id="ct-rsi-s">—</span>
+          </div>
+          <div class="ct-row"><span class="ct-row-lbl">Stoch %K</span><span class="ct-row-val" id="ct-stoch">—</span><span class="ct-badge ct-neu" id="ct-stoch-s">—</span></div>
+          <div class="ct-row"><span class="ct-row-lbl">Williams %R</span><span class="ct-row-val" id="ct-wr">—</span><span class="ct-badge ct-neu" id="ct-wr-s">—</span></div>
+          <div class="ct-row"><span class="ct-row-lbl">CCI(20)</span><span class="ct-row-val" id="ct-cci">—</span><span class="ct-badge ct-neu" id="ct-cci-s">—</span></div>
+          <div class="ct-row"><span class="ct-row-lbl">Momentum</span><span class="ct-row-val" id="ct-mom">—</span><span class="ct-badge ct-neu" id="ct-mom-s">—</span></div>
+        </div>
+      </div>
+
+      <!-- VOLUME -->
+      <div class="ct-card" id="ctc-vol">
+        <div class="ct-card-head" onclick="ctToggleCard('ctc-vol')">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x="1" y="7" width="2" height="3" rx="0.5" fill="var(--accent-purple)"/><rect x="4.5" y="4.5" width="2" height="5.5" rx="0.5" fill="var(--accent-purple)"/><rect x="8" y="2" width="2" height="8" rx="0.5" fill="var(--accent-purple)"/></svg>
+          VOLUME
+          <svg class="ct-card-arrow" width="9" height="9" viewBox="0 0 9 9" fill="none"><polyline points="1.5,3 4.5,6.5 7.5,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </div>
+        <div class="ct-card-body" id="ctb-vol">
+          <div class="ct-row"><span class="ct-row-lbl">Volume</span><span class="ct-row-val" id="ct-vol">—</span><span class="ct-badge ct-neu" id="ct-vol-s">—</span></div>
+          <div class="ct-row"><span class="ct-row-lbl">Vol MA20</span><span class="ct-row-val" id="ct-vol-ma">—</span></div>
+          <div class="ct-row"><span class="ct-row-lbl">OBV Trend</span><span class="ct-row-val" id="ct-obv">—</span></div>
+        </div>
+      </div>
+
+      <!-- VOLATILITY -->
+      <div class="ct-card" id="ctc-vola">
+        <div class="ct-card-head" onclick="ctToggleCard('ctc-vola')">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 5.5Q2 2 3.5 5.5Q5 9 6.5 5.5Q8 2 9.5 5.5" stroke="var(--accent-gold)" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+          VOLATILITY
+          <svg class="ct-card-arrow" width="9" height="9" viewBox="0 0 9 9" fill="none"><polyline points="1.5,3 4.5,6.5 7.5,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </div>
+        <div class="ct-card-body" id="ctb-vola">
+          <div class="ct-row"><span class="ct-row-lbl">ATR(14)</span><span class="ct-row-val" id="ct-atr">—</span><span class="ct-badge ct-neu" id="ct-atr-s">—</span></div>
+          <div class="ct-row"><span class="ct-row-lbl">BB Width</span><span class="ct-row-val" id="ct-bbw2">—</span></div>
+          <div class="ct-row"><span class="ct-row-lbl">Std Dev</span><span class="ct-row-val" id="ct-stddev">—</span></div>
+        </div>
+      </div>
+
+      <!-- PIVOT POINTS -->
+      <div class="ct-card" id="ctc-pivot">
+        <div class="ct-card-head" onclick="ctToggleCard('ctc-pivot')">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><line x1="1" y1="3.5" x2="10" y2="3.5" stroke="var(--accent-red)" stroke-width="1.3"/><line x1="1" y1="7.5" x2="10" y2="7.5" stroke="var(--accent-green)" stroke-width="1.3"/></svg>
+          PIVOT POINTS
+          <svg class="ct-card-arrow" width="9" height="9" viewBox="0 0 9 9" fill="none"><polyline points="1.5,3 4.5,6.5 7.5,3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </div>
+        <div class="ct-card-body" id="ctb-pivot">
+          <div class="ct-pivot-grid">
+            <div class="ct-pivot-cell ct-pivot-s"><div class="pl">S3</div><div class="pv" id="ct-s3">—</div></div>
+            <div class="ct-pivot-cell ct-pivot-pp"><div class="pl">PP</div><div class="pv" id="ct-pp">—</div></div>
+            <div class="ct-pivot-cell ct-pivot-r"><div class="pl">R3</div><div class="pv" id="ct-r3">—</div></div>
+          </div>
+          <div class="ct-pivot-grid" style="margin-top:3px">
+            <div class="ct-pivot-cell ct-pivot-s"><div class="pl">S2</div><div class="pv" id="ct-s2">—</div></div>
+            <div class="ct-pivot-cell ct-pivot-s"><div class="pl">S1</div><div class="pv" id="ct-s1">—</div></div>
+            <div class="ct-pivot-cell ct-pivot-r"><div class="pl">R1</div><div class="pv" id="ct-r1">—</div></div>
+          </div>
+          <div class="ct-pivot-grid" style="margin-top:3px">
+            <div class="ct-pivot-cell"></div>
+            <div class="ct-pivot-cell ct-pivot-r"><div class="pl">R2</div><div class="pv" id="ct-r2">—</div></div>
+            <div class="ct-pivot-cell"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /ct-ind-panel -->
+
+  </div><!-- /ct-body -->
+</div><!-- /ct-page -->
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   CHART PAGE CONTROLLER v4.0 — TradingView Widget
+   - Chart candle: TradingView Advanced Chart Widget
+   - Harga live & indikator: Binance + ExchangeRate-API
+   - Tidak perlu LightweightCharts library
+══════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+
+  /* ── State ── */
+  var _sym     = ((window.AppState && window.AppState.selectedInstrument) || 'BTCUSDT').replace('/','');
+  var _tf      = '60'; /* TradingView interval: 1,5,15,30,60,240,D,W */
+  var _priceTimer    = null;
+  var _indTimer      = null;
+  var _tvLoaded      = false;
+  var _tvWidget      = null;
+
+  /* ── TF mapping: AppState TF → TradingView interval ── */
+  var TF_MAP = {
+    'M1':'1','M5':'5','M15':'15','M30':'30',
+    'H1':'60','H4':'240','D1':'D','W1':'W',
+    '1':'1','5':'5','15':'15','30':'30',
+    '60':'60','240':'240','D':'D','W':'W'
+  };
+
+  /* ── Symbol mapping: instrumen kita → TradingView symbol ── */
+  var TV_SYMBOL_MAP = {
+    /* Crypto — Binance exchange */
+    'BTCUSDT':  'BINANCE:BTCUSDT',
+    'ETHUSDT':  'BINANCE:ETHUSDT',
+    'BNBUSDT':  'BINANCE:BNBUSDT',
+    'SOLUSDT':  'BINANCE:SOLUSDT',
+    'XRPUSDT':  'BINANCE:XRPUSDT',
+    'ADAUSDT':  'BINANCE:ADAUSDT',
+    'DOGEUSDT': 'BINANCE:DOGEUSDT',
+    'AVAXUSDT': 'BINANCE:AVAXUSDT',
+    'LINKUSDT': 'BINANCE:LINKUSDT',
+    'DOTUSDT':  'BINANCE:DOTUSDT',
+    'LTCUSDT':  'BINANCE:LTCUSDT',
+    /* Metals via TradingView */
+    'XAUTUSDT': 'BINANCE:XAUTUSDT',
+    'XAGUSDT':  'BINANCE:XAGUSDT',
+    /* Forex via FX_IDC */
+    'EURUSD':   'FX_IDC:EURUSD',
+    'GBPUSD':   'FX_IDC:GBPUSD',
+    'USDJPY':   'FX_IDC:USDJPY',
+    'AUDUSD':   'FX_IDC:AUDUSD',
+    'USDCAD':   'FX_IDC:USDCAD',
+    'NZDUSD':   'FX_IDC:NZDUSD',
+    'GBPJPY':   'FX_IDC:GBPJPY',
+    'EURJPY':   'FX_IDC:EURJPY',
+    'USDCHF':   'FX_IDC:USDCHF',
+  };
+
+  /* ── Utils ── */
+  function $id(id){ return document.getElementById(id); }
+
+  function _dec(sym) {
+    if (window.getDecimals) return window.getDecimals(sym);
+    if (sym.includes('JPY')) return 3;
+    if (sym.endsWith('USDT')) return 2;
+    return 5;
+  }
+
+  function _fmtPrice(v) {
+    if (v == null || isNaN(v)) return '—';
+    var d = _dec(_sym);
+    return parseFloat(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+  function _fmtNum(v, d) {
+    if (v == null || isNaN(v)) return '—';
+    d = d !== undefined ? d : 2;
+    return parseFloat(v).toFixed(d);
+  }
+  function _fmtVol(v) {
+    if (!v && v !== 0) return '—';
+    if (v >= 1e9) return (v/1e9).toFixed(2) + 'B';
+    if (v >= 1e6) return (v/1e6).toFixed(2) + 'M';
+    if (v >= 1e3) return (v/1e3).toFixed(1) + 'K';
+    return v.toFixed(0);
+  }
+  function _setText(id, val) { var el = $id(id); if (el) el.textContent = val; }
+  function _setBadge(id, sig) {
+    var el = $id(id);
+    if (!el) return;
+    el.className = 'ct-badge';
+    if (sig === 'BUY')  { el.classList.add('ct-buy');  el.textContent = '▲ BUY';  }
+    else if (sig === 'SELL') { el.classList.add('ct-sell'); el.textContent = '▼ SELL'; }
+    else                { el.classList.add('ct-neu');  el.textContent = '— NEU'; }
+  }
+
+  /* ── Display name ── */
+  function _displayName(sym) {
+    var cfg = window.CONFIG;
+    if (cfg) {
+      var c = (cfg.CRYPTO_SYMBOLS||[]).find(function(x){ return x.symbol===sym; });
+      if (c) return c.display;
+      var m = (cfg.METAL_SYMBOLS||[]).find(function(x){ return x.symbol===sym; });
+      if (m) return m.display;
+      var fx = (cfg.FOREX_PAIRS||[]).find(function(x){ return (x.base+x.quote)===sym || x.pair===sym; });
+      if (fx) return fx.pair;
+    }
+    if (sym.length === 6 && !sym.includes('USDT')) return sym.slice(0,3)+'/'+sym.slice(3);
+    return sym;
+  }
+
+  /* ── TF yang sedang aktif: kembalikan label display ── */
+  function _tfLabel(tvTf) {
+    var map = {'1':'M1','5':'M5','15':'M15','30':'M30','60':'H1','240':'H4','D':'D1','W':'W1'};
+    return map[tvTf] || tvTf;
+  }
+
+  /* ── Detect dark mode ── */
+  function _isDark() {
+    return !document.body.classList.contains('light-mode');
+  }
+
+  /* ══════════════════════════════════════════
+     TRADINGVIEW WIDGET LOADER — dual method
+     Method 1: TradingView.widget() JS library (via s3.tradingview.com/tv.js)
+     Method 2: iframe embed fallback (widgetembed URL)
+     Auto-fallback ke method 2 jika method 1 gagal.
+  ══════════════════════════════════════════ */
+  function _getTVSymbol(sym) {
+    return TV_SYMBOL_MAP[sym] || ('BINANCE:' + sym);
+  }
+
+  /* Bangun URL iframe widgetembed (fallback method) */
+  function _buildTVUrl(sym, interval) {
+    var tvSym  = _getTVSymbol(sym);
+    var isDark = _isDark();
+    var params = [
+      'symbol='              + encodeURIComponent(tvSym),
+      'interval='            + (interval || '60'),
+      'timezone='            + encodeURIComponent('Asia/Jakarta'),
+      'theme='               + (isDark ? 'dark' : 'light'),
+      'style=1',             /* 1 = Candlestick */
+      'locale=id',
+      /* ── Sembunyikan semua UI TradingView — hanya candle + harga ── */
+      'hide_top_toolbar=true',    /* hilangkan toolbar atas (interval, indikator, dsb) */
+      'hide_side_toolbar=true',   /* hilangkan toolbar kiri (drawing tools) */
+      'hide_legend=true',         /* hilangkan legend OHLC di pojok kiri atas */
+      'enable_publishing=false',
+      'save_image=false',
+      'withdateranges=false',     /* hilangkan range picker bawah */
+      'allow_symbol_change=false',
+      'details=false',
+      'hotlist=false',
+      'calendar=false',
+      'news=false',
+      'studies=[]',               /* tidak ada indikator bawaan TV */
+      'show_popup_button=false',
+      'popup_width=0',
+      'popup_height=0',
+    ].join('&');
+    return 'https://www.tradingview.com/widgetembed/?' + params;
+  }
+
+  /* Pastikan ct-tv-outer punya tinggi nyata */
+  function _ensureTVHeight() {
+    var outer = $id('ct-tv-outer');
+    var iframe = $id('ct-tv-iframe');
+    if (!outer) return;
+    var h = outer.clientHeight || outer.offsetHeight;
+    if (h < 100) {
+      var topbarH   = parseInt(getComputedStyle(document.documentElement)
+                      .getPropertyValue('--topbar-height')) || 44;
+      var indPanel  = $id('ct-ind-panel');
+      var indH      = indPanel ? (indPanel.offsetHeight || 180) : 180;
+      var toolbarEl = document.querySelector('.ct-toolbar');
+      var tbH       = toolbarEl ? (toolbarEl.offsetHeight || 44) : 44;
+      var priceBarEl = document.querySelector('.ct-price-bar');
+      var pbH        = priceBarEl ? (priceBarEl.offsetHeight || 34) : 34;
+      h = Math.max(window.innerHeight - topbarH - tbH - pbH - indH - 24, 300);
+      outer.style.height = h + 'px';
+      if (iframe) iframe.style.height = h + 'px';
+      console.log('[TV] Forced height:', h + 'px');
+    }
+  }
+
+  /* Method 1: TradingView.widget() JS library */
+  function _loadWithJSLibrary(sym, interval, container) {
+    var tvSym  = _getTVSymbol(sym);
+    var isDark = _isDark();
+
+    /* Hapus script lama jika ada */
+    var oldScript = document.getElementById('tv-js-lib');
+    // Tidak hapus script agar tidak re-download, hanya re-init widget
+
+    function _doInit() {
+      try {
+        /* Buat div baru sebagai target widget */
+        var divId = 'tv_widget_' + Date.now();
+        var div = document.createElement('div');
+        div.id = divId;
+        div.style.cssText = 'width:100%;height:100%;min-height:300px;';
+        container.appendChild(div);
+
+        var w = new window.TradingView.widget({
+          autosize:          true,
+          symbol:            tvSym,
+          interval:          interval || '60',
+          timezone:          'Asia/Jakarta',
+          theme:             isDark ? 'dark' : 'light',
+          style:             '1',
+          locale:            'id',
+          enable_publishing: false,
+          hide_top_toolbar:  false,
+          hide_legend:       false,
+          save_image:        false,
+          container_id:      divId,
+          allow_symbol_change: false,
+          withdateranges:    true,
+          hide_side_toolbar: false,
+          onChartReady: function() {
+            _tvLoaded = true;
+            clearTimeout(window._tvTimeout);
+            var ld = $id('ct-tv-loading');
+            if (ld) ld.classList.add('hidden');
+            console.log('[TV] JS library widget ready:', tvSym);
+          }
+        });
+        _tvWidget = w;
+        console.log('[TV] TradingView.widget() created for:', tvSym);
+      } catch(err) {
+        console.error('[TV] widget() error, fallback to iframe:', err.message);
+        _loadWithIframe(sym, interval);
+      }
+    }
+
+    if (window.TradingView && window.TradingView.widget) {
+      _doInit();
+    } else {
+      /* Load tv.js library */
+      var script = document.getElementById('tv-js-lib');
+      if (!script) {
+        script = document.createElement('script');
+        script.id  = 'tv-js-lib';
+        script.src = 'https://s3.tradingview.com/tv.js';
+        script.async = true;
+        document.head.appendChild(script);
+      }
+      script.onload = function() {
+        var attempts = 0;
+        var chk = setInterval(function() {
+          attempts++;
+          if (window.TradingView && window.TradingView.widget) {
+            clearInterval(chk);
+            _doInit();
+          } else if (attempts > 30) {
+            clearInterval(chk);
+            console.warn('[TV] tv.js loaded but TradingView.widget not found, fallback iframe');
+            _loadWithIframe(sym, interval);
+          }
+        }, 150);
+      };
+      script.onerror = function() {
+        console.warn('[TV] tv.js load failed, fallback iframe');
+        _loadWithIframe(sym, interval);
+      };
+    }
+  }
+
+  /* Method 2: iframe embed (fallback) */
+  function _loadWithIframe(sym, interval) {
+    /* Hapus div yang sudah dibuat oleh method 1 (jika ada) */
+    var container = $id('ct-tv-container');
+    if (container) container.innerHTML = '';
+
+    var iframe = $id('ct-tv-iframe');
+    if (!iframe) {
+      /* Buat iframe baru jika belum ada */
+      iframe = document.createElement('iframe');
+      iframe.id = 'ct-tv-iframe';
+      iframe.style.cssText = 'width:100%;height:100%;min-height:300px;border:none;display:block;';
+      iframe.setAttribute('allowtransparency','true');
+      iframe.setAttribute('allowfullscreen','');
+      iframe.setAttribute('frameborder','0');
+      iframe.setAttribute('scrolling','no');
+      var outer = $id('ct-tv-outer');
+      if (outer) outer.appendChild(iframe);
+      else {
+        _showTVError('Container chart tidak ditemukan.');
+        return;
+      }
+    }
+
+    var url = _buildTVUrl(sym, interval);
+    console.log('[TV] iframe fallback:', url.substring(0,120));
+
+    iframe.onload = function() {
+      _tvLoaded = true;
+      clearTimeout(window._tvTimeout);
+      var ld = $id('ct-tv-loading');
+      if (ld) ld.classList.add('hidden');
+    };
+
+    iframe.src = url;
+
+    /* Iframe cross-origin sering tidak fire onload — timeout hide loading */
+    clearTimeout(window._tvTimeout);
+    window._tvTimeout = setTimeout(function() {
+      if (!_tvLoaded) {
+        _tvLoaded = true;
+        var ld = $id('ct-tv-loading');
+        if (ld) ld.classList.add('hidden');
+        console.log('[TV] Auto-hide loading after 4s (iframe cross-origin)');
+      }
+    }, 4000);
+  }
+
+  /* Main loader: coba JS library dulu, fallback ke iframe */
+  function _loadTVWidget(sym, interval) {
+    clearTimeout(window._tvTimeout);
+    _tvLoaded = false;
+
+    /* Pastikan tinggi container */
+    _ensureTVHeight();
+
+    /* Tampilkan loading */
+    var loadingEl = $id('ct-tv-loading');
+    if (loadingEl) {
+      loadingEl.classList.remove('hidden');
+      _setText('ct-tv-load-msg', 'Memuat chart ' + _displayName(sym) + '...');
+    }
+    var errEl = $id('ct-error');
+    if (errEl) errEl.classList.remove('show');
+
+    /* Bersihkan container & iframe lama */
+    var container = $id('ct-tv-container');
+    if (container) container.innerHTML = '';
+    var oldIframe = $id('ct-tv-iframe');
+    if (oldIframe) { oldIframe.src = 'about:blank'; }
+
+    /* Timeout global — 20 detik: jika semua gagal tampilkan error */
+    window._tvGlobalTimeout = setTimeout(function() {
+      if (!_tvLoaded) {
+        _showTVError('Chart TradingView gagal dimuat dalam 20 detik. Pastikan koneksi internet aktif dan coba refresh.');
+      }
+    }, 20000);
+
+    /* Coba method 1 (JS library) */
+    /* Jika TV JS library sudah ada dari load sebelumnya, langsung pakai */
+    if (window.TradingView && window.TradingView.widget && container) {
+      _loadWithJSLibrary(sym, interval, container);
+    } else {
+      /* Langsung pakai iframe karena lebih reliable dan tidak perlu library */
+      _loadWithIframe(sym, interval);
+    }
+  }
+
+  function _showTVError(msg) {
+    clearTimeout(window._tvTimeout);
+    clearTimeout(window._tvGlobalTimeout);
+    var loadingEl = $id('ct-tv-loading');
+    if (loadingEl) loadingEl.classList.add('hidden');
+    var errEl = $id('ct-error');
+    if (errEl) errEl.classList.add('show');
+    _setText('ct-err-msg', msg || 'Chart tidak bisa dimuat.');
+  }
+
+    /* ══════════════════════════════════════════
+     PUBLIC FUNCTIONS
+  ══════════════════════════════════════════ */
+
+  /* Set TF dan reload widget */
+  window.ctSetTF = function(tf) {
+    _tf = tf;
+    /* Update AppState TF (normalisasi balik) */
+    var tfBack = {'1':'M1','5':'M5','15':'M15','30':'M30','60':'H1','240':'H4','D':'D1','W':'W1'};
+    if (window.AppState) window.AppState.selectedTimeframe = tfBack[tf] || tf;
+    /* Update tombol aktif */
+    document.querySelectorAll('#ct-tf-group .ct-btn').forEach(function(b){
+      b.classList.toggle('tf-active', b.dataset.tf === tf);
+    });
+    /* Reload widget dengan TF baru */
+    _loadTVWidget(_sym, tf);
+    /* Refresh indikator Binance */
+    _fetchIndData();
+  };
+
+  /* Reload TV widget */
+  window.ctReloadTV = function() {
+    _loadTVWidget(_sym, _tf);
+  };
+
+  /* Refresh indikator saja (tidak reload chart) */
+  window.ctRefresh = function() {
+    var icon = $id('ct-ref-icon');
+    if (icon) icon.style.animation = 'ct-spin 0.8s linear infinite';
+    /* Hapus cache OHLCV */
+    if (window.AppState && window.AppState.ohlcv) {
+      var tfAppState = {'1':'M1','5':'M5','15':'M15','30':'M30','60':'H1','240':'H4','D':'D1','W':'W1'};
+      var appTf = tfAppState[_tf] || _tf;
+      delete window.AppState.ohlcv[_sym + '_' + appTf];
+    }
+    _fetchIndData().finally(function(){
+      setTimeout(function(){ if(icon) icon.style.animation=''; }, 800);
+    });
+  };
+
+  window.ctToggleCard = function(cardId) {
+    var suffix = cardId.replace('ctc-', '');
+    var body   = $id('ctb-' + suffix);
+    if (!body) return;
+    body.classList.toggle('hide');
+    var arrow = document.querySelector('#' + cardId + ' .ct-card-arrow');
+    if (arrow) arrow.style.transform = body.classList.contains('hide') ? 'rotate(-90deg)' : '';
+  };
+
+  /* ══════════════════════════════════════════
+     PRICE BAR — dari Binance via AppState
+  ══════════════════════════════════════════ */
+  function _updatePriceBar() {
+    var sym = _sym;
+    var d   = null;
+    if (window.API && window.API.getPrice)   d = window.API.getPrice(sym);
+    if (!d && window.API && window.API.findPrice) d = window.API.findPrice(sym);
+    if (!d && window.AppState && window.AppState.prices) {
+      d = window.AppState.prices[sym]
+       || window.AppState.prices[sym.replace('/', '')];
+    }
+
+    /* Fallback: ambil dari OHLCV terakhir */
+    if (!d) {
+      var tfAppState = {'1':'M1','5':'M5','15':'M15','30':'M30','60':'H1','240':'H4','D':'D1','W':'W1'};
+      var appTf = tfAppState[_tf] || 'H1';
+      var sk = sym + '_' + appTf;
+      var ohlcv = window.AppState && window.AppState.ohlcv && window.AppState.ohlcv[sk];
+      if (ohlcv && ohlcv.length) {
+        var last = ohlcv[ohlcv.length - 1];
+        _setText('ct-price', _fmtPrice(last.close));
+      }
+      return;
+    }
+
+    var price   = d.price || d.close;
+    var prevTxt = ($id('ct-price') || {}).textContent;
+    var newTxt  = _fmtPrice(price);
+
+    if (prevTxt && prevTxt !== '—' && prevTxt !== newTxt) {
+      var priceEl = $id('ct-price');
+      if (priceEl) {
+        priceEl.classList.remove('ct-flash-up','ct-flash-dn');
+        void priceEl.offsetWidth;
+        var prevNum = parseFloat(prevTxt.replace(/,/g,''));
+        priceEl.classList.add(price > prevNum ? 'ct-flash-up' : 'ct-flash-dn');
+      }
+    }
+    _setText('ct-price', newTxt);
+
+    var pct = d.changePct;
+    if (pct != null && !isNaN(pct)) {
+      var chgEl = $id('ct-chg');
+      if (chgEl) {
+        chgEl.textContent = (pct>=0?'+':'') + parseFloat(pct).toFixed(2) + '%';
+        chgEl.className   = 'ct-pb-chg ' + (pct>=0?'up':'dn');
+      }
+    }
+    if (d.open)   _setText('ct-o', 'O:'+_fmtPrice(d.open));
+    if (d.high)   _setText('ct-h', 'H:'+_fmtPrice(d.high));
+    if (d.low)    _setText('ct-l', 'L:'+_fmtPrice(d.low));
+    if (d.volume) _setText('ct-v', 'Vol:'+_fmtVol(d.volume));
+
+    var now = new Date();
+    _setText('ct-time',
+      String(now.getHours()).padStart(2,'0') + ':' +
+      String(now.getMinutes()).padStart(2,'0') + ':' +
+      String(now.getSeconds()).padStart(2,'0'));
+  }
+
+  /* ══════════════════════════════════════════
+     INDICATOR FETCH — dari Binance OHLCV
+  ══════════════════════════════════════════ */
+  function _fetchIndData() {
+    if (!window.API || !window.API.fetchOHLCV) return Promise.resolve();
+    /* Mapping TF TV → AppState TF untuk fetchOHLCV */
+    var tfMap2 = {'1':'M1','5':'M5','15':'M15','30':'M30','60':'H1','240':'H4','D':'D1','W':'W1'};
+    var appTf = tfMap2[_tf] || 'H1';
+
+    return window.API.fetchOHLCV(_sym, appTf)
+      .then(function(data) {
+        if (data && data.length > 30 && window.Indicators) {
+          _updateIndicators(data);
+        }
+      })
+      .catch(function(e) {
+        console.warn('[Chart] fetchOHLCV gagal untuk indikator:', e.message);
+      });
+  }
+
+  /* ══════════════════════════════════════════
+     INDICATOR PANEL UPDATE
+  ══════════════════════════════════════════ */
+  function _updateIndicators(ohlcv) {
+    if (!ohlcv || ohlcv.length < 30 || !window.Indicators) return;
+    var Ind    = window.Indicators;
+    var closes = ohlcv.map(function(c){ return c.close; });
+    var highs  = ohlcv.map(function(c){ return c.high; });
+    var lows   = ohlcv.map(function(c){ return c.low; });
+    var vols   = ohlcv.map(function(c){ return c.volume||0; });
+    var n      = ohlcv.length;
+    var last   = n - 1;
+    var price  = closes[last];
+
+    var sigs = Ind.getSignals(ohlcv);
+
+    /* ── Trend ── */
+    var ema20v  = Ind.calcEMA(closes, 20)[last];
+    var ema50v  = Ind.calcEMA(closes, 50)[last];
+    var ema200v = Ind.calcEMA(closes, 200)[last];
+    var macdRes = Ind.calcMACD(closes);
+    var macdH   = macdRes.histogram[last];
+    var bbRes   = Ind.calcBollingerBands(closes, 20, 2);
+    var bbW     = bbRes.width[last];
+
+    _setText('ct-ema20',  _fmtPrice(ema20v));
+    _setBadge('ct-ema20-s', !isNaN(ema20v) ? (price>ema20v?'BUY':'SELL') : 'NEUTRAL');
+    _setText('ct-ema50',  _fmtPrice(ema50v));
+    _setBadge('ct-ema50-s', !isNaN(ema50v) ? (price>ema50v?'BUY':'SELL') : 'NEUTRAL');
+    _setText('ct-ema200', _fmtPrice(ema200v));
+    _setBadge('ct-ema200-s', !isNaN(ema200v) ? (price>ema200v?'BUY':'SELL') : 'NEUTRAL');
+    _setText('ct-macd', isNaN(macdH) ? '—' : (macdH>=0?'+':'')+macdH.toFixed(6));
+    _setBadge('ct-macd-s', sigs.macd && sigs.macd.signal ? sigs.macd.signal : 'NEUTRAL');
+    _setText('ct-bbw', isNaN(bbW) ? '—' : bbW.toFixed(2)+'%');
+    _setBadge('ct-bb-s', sigs.bb && sigs.bb.signal ? sigs.bb.signal : 'NEUTRAL');
+
+    /* ── Momentum ── */
+    var rsiArr  = Ind.calcRSI(closes, 14);
+    var rsiV    = rsiArr[last];
+    var stochR  = Ind.calcStochastic(highs, lows, closes);
+    var stochK  = stochR.k[last];
+    var wrArr   = Ind.calcWilliamsR(highs, lows, closes, 14);
+    var wrV     = wrArr[last];
+    var cciArr  = Ind.calcCCI(highs, lows, closes, 20);
+    var cciV    = cciArr[last];
+    var momArr  = Ind.calcMomentum(closes, 10);
+    var momV    = momArr[last];
+
+    if (!isNaN(rsiV)) {
+      _setText('ct-rsi', rsiV.toFixed(1));
+      var fillEl = $id('ct-rsi-fill');
+      var dotEl  = $id('ct-rsi-dot');
+      if (fillEl) {
+        fillEl.style.width = rsiV + '%';
+        fillEl.style.background = rsiV>70 ? 'var(--accent-red)' : rsiV<30 ? 'var(--accent-green)' : 'var(--accent-blue)';
+      }
+      if (dotEl) dotEl.style.left = rsiV + '%';
+      var rsiEl = $id('ct-rsi');
+      if (rsiEl) rsiEl.style.color = rsiV>70 ? 'var(--accent-red)' : rsiV<30 ? 'var(--accent-green)' : 'var(--text-primary)';
+      _setBadge('ct-rsi-s', rsiV>70?'SELL':rsiV<30?'BUY':'NEUTRAL');
+    }
+
+    _setText('ct-stoch', isNaN(stochK)?'—':stochK.toFixed(1));
+    _setBadge('ct-stoch-s', !isNaN(stochK)?(stochK<20?'BUY':stochK>80?'SELL':'NEUTRAL'):'NEUTRAL');
+    _setText('ct-wr', isNaN(wrV)?'—':wrV.toFixed(1));
+    _setBadge('ct-wr-s', !isNaN(wrV)?(wrV>-20?'SELL':wrV<-80?'BUY':'NEUTRAL'):'NEUTRAL');
+    _setText('ct-cci', isNaN(cciV)?'—':cciV.toFixed(0));
+    _setBadge('ct-cci-s', !isNaN(cciV)?(cciV>100?'SELL':cciV<-100?'BUY':'NEUTRAL'):'NEUTRAL');
+    _setText('ct-mom', isNaN(momV)?'—':(momV>=0?'+':'')+momV.toFixed(4));
+    _setBadge('ct-mom-s', !isNaN(momV)?(momV>0?'BUY':momV<0?'SELL':'NEUTRAL'):'NEUTRAL');
+
+    /* ── Volume ── */
+    var volNow  = vols[last];
+    var volEmaR = Ind.calcVolumeEMA(vols, 20);
+    var volMa   = volEmaR[last];
+    var obvArr  = Ind.calcOBV(closes, vols);
+    var obv0    = obvArr[last];
+    var obv5    = obvArr[Math.max(0, last-5)];
+
+    _setText('ct-vol', _fmtVol(volNow));
+    _setBadge('ct-vol-s', !isNaN(volMa)?(volNow>volMa?'BUY':'SELL'):'NEUTRAL');
+    _setText('ct-vol-ma', _fmtVol(volMa));
+    var obvEl = $id('ct-obv');
+    if (obvEl) {
+      obvEl.innerHTML = obv0>=obv5
+        ? '<span style="color:var(--accent-green)">▲ Rising</span>'
+        : '<span style="color:var(--accent-red)">▼ Falling</span>';
+    }
+
+    /* ── Volatility ── */
+    var atrArr = Ind.calcATR(highs, lows, closes, 14);
+    var atrV   = atrArr[last];
+    var sdArr  = Ind.calcStdDev(closes, 20);
+    var sdV    = sdArr[last];
+    var atrAvg = atrArr.slice(-20).filter(function(v){ return !isNaN(v); })
+                  .reduce(function(a,b){ return a+b; },0)/20;
+
+    _setText('ct-atr', isNaN(atrV)?'—':atrV.toFixed(5));
+    if (!isNaN(atrV) && atrAvg > 0) {
+      var r = atrV/atrAvg;
+      var atrEl = $id('ct-atr-s');
+      if (atrEl) {
+        atrEl.className = 'ct-badge';
+        if (r>1.5)      { atrEl.classList.add('ct-sell'); atrEl.textContent='⚡HIGH'; }
+        else if (r<0.7) { atrEl.classList.add('ct-buy');  atrEl.textContent='😴LOW';  }
+        else            { atrEl.classList.add('ct-neu');  atrEl.textContent='➡MED';  }
+      }
+    }
+    _setText('ct-bbw2', isNaN(bbW)?'—':bbW.toFixed(2)+'%');
+    _setText('ct-stddev', isNaN(sdV)?'—':sdV.toFixed(5));
+
+    /* ── Pivot Points ── */
+    var pivIdx = last>0 ? last-1 : 0;
+    var piv    = Ind.calcPivotPoints(ohlcv[pivIdx].high, ohlcv[pivIdx].low, ohlcv[pivIdx].close);
+    var c      = piv.classic;
+    _setText('ct-pp', _fmtPrice(c.pp));
+    _setText('ct-r1', _fmtPrice(c.r1));
+    _setText('ct-r2', _fmtPrice(c.r2));
+    _setText('ct-r3', _fmtPrice(c.r3));
+    _setText('ct-s1', _fmtPrice(c.s1));
+    _setText('ct-s2', _fmtPrice(c.s2));
+    _setText('ct-s3', _fmtPrice(c.s3));
+
+    /* ── Overall Signal ── */
+    var score = sigs.overall.score;
+    var dir   = sigs.overall.direction;
+    var needlePct = ((score + 100) / 200 * 100).toFixed(1);
+    var needle = $id('ct-needle');
+    if (needle) needle.style.left = needlePct + '%';
+
+    var resEl = $id('ct-sig-result');
+    if (resEl) {
+      resEl.textContent = dir;
+      var colorMap = {
+        'STRONG BUY':'var(--accent-green)', 'BUY':'var(--accent-green)',
+        'NEUTRAL':'var(--text-secondary)',
+        'SELL':'var(--accent-red)', 'STRONG SELL':'var(--accent-red)'
+      };
+      resEl.style.color = colorMap[dir] || 'var(--text-secondary)';
+    }
+  }
+
+  /* ══════════════════════════════════════════
+     BOOT
+  ══════════════════════════════════════════ */
+  function _boot() {
+    /* Sync select dengan state */
+    var sel = $id('ct-instrument');
+    if (sel) {
+      sel.value = _sym;
+      sel.addEventListener('change', function(){
+        _sym = this.value.replace('/','');
+        if (window.AppState) window.AppState.selectedInstrument = _sym;
+        _setText('ct-sym', _displayName(_sym));
+        /* Load widget TradingView baru */
+        _loadTVWidget(_sym, _tf);
+        /* Fetch indikator Binance */
+        _fetchIndData();
+      });
+    }
+
+    /* Sync TF buttons — default H1 = interval 60 */
+    /* Baca dari AppState jika ada */
+    if (window.AppState && window.AppState.selectedTimeframe) {
+      var appTf = window.AppState.selectedTimeframe;
+      _tf = TF_MAP[appTf] || '60';
+    }
+    document.querySelectorAll('#ct-tf-group .ct-btn').forEach(function(b){
+      b.classList.toggle('tf-active', b.dataset.tf === _tf);
+    });
+
+    _setText('ct-sym', _displayName(_sym));
+
+    /* Load TradingView chart */
+    _loadTVWidget(_sym, _tf);
+
+    /* Fetch indikator Binance */
+    _fetchIndData();
+
+    /* Start price bar loop */
+    _priceTimer = setInterval(_updatePriceBar, 3000);
+    _updatePriceBar();
+
+    /* Start indicator refresh loop (tiap 60 detik) */
+    _indTimer = setInterval(_fetchIndData, 60000);
+
+    /* Resize observer untuk update tinggi TV iframe */
+    if (window.ResizeObserver) {
+      var tvRO = new ResizeObserver(function() { _ensureTVHeight(); });
+      var tvOuter = $id('ct-tv-outer');
+      if (tvOuter) tvRO.observe(tvOuter);
+    }
+    window.addEventListener('resize', function() { _ensureTVHeight(); });
+
+    /* Listen events dari API */
+    document.addEventListener('pricesUpdated', function(){ _updatePriceBar(); });
+    document.addEventListener('ohlcvUpdated', function(e){
+      if (e.detail) {
+        var tfBack = {'1':'M1','5':'M5','15':'M15','30':'M30','60':'H1','240':'H4','D':'D1','W':'W1'};
+        var appTf  = tfBack[_tf] || 'H1';
+        if (e.detail.symbol === _sym && e.detail.timeframe === appTf) {
+          _fetchIndData();
+        }
+      }
+    });
+    document.addEventListener('ohlcvReady', function(e){
+      if (e.detail && e.detail.symbol === _sym) _fetchIndData();
+    });
+  }
+
+  /* Cleanup on navigation */
+  window.addEventListener('hashchange', function(){
+    clearInterval(_priceTimer);
+    clearInterval(_indTimer);
+  });
+
+  /* Boot langsung — tidak perlu tunggu ChartManager/LightweightCharts */
+  _boot();
+
+})();
+</script>

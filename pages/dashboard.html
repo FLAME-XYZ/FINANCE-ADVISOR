@@ -1,0 +1,1308 @@
+<!-- ═══════════════════════════════════════════════════════════════
+     ProTrader Analytics — dashboard.html
+     Halaman 1: Market Overview, Watchlist, Heatmap, Fear & Greed
+     Dimuat via SPA router ke #main-content
+     ═══════════════════════════════════════════════════════════════ -->
+
+<style>
+/* ── Dashboard Layout ── */
+.dashboard-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.25s ease;
+  min-height: 100%;
+}
+
+/* Row 1: 3 kolom — Watchlist | Heatmap | Fear&Greed */
+.dash-row1 {
+  display: grid;
+  grid-template-columns: 220px 1fr 200px;
+  gap: 14px;
+  align-items: start;
+}
+
+/* Row 2: Tabel harga penuh */
+.dash-row2 { width: 100%; }
+
+/* Row 3: Sessions + Quick Stats */
+.dash-row3 {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: start;
+}
+
+/* ── Watchlist ── */
+.watchlist-card { height: 100%; }
+.watchlist-header { display: flex; align-items: center; justify-content: space-between; }
+.watchlist-items  { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+
+.wl-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--transition);
+  border: 1px solid transparent;
+  position: relative;
+}
+.wl-item:hover { background: var(--bg-hover); border-color: var(--border-color); }
+.wl-item.dragging { opacity: 0.4; border-style: dashed; border-color: var(--accent-blue); }
+.wl-item.drag-over { background: var(--accent-blue-dim); border-color: var(--accent-blue); }
+
+.wl-drag-handle {
+  color: var(--text-muted);
+  cursor: grab;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+.wl-drag-handle:active { cursor: grabbing; }
+
+.wl-info { flex: 1; min-width: 0; }
+.wl-sym  { font-size: 0.78rem; font-weight: 600; color: var(--text-primary); font-family: var(--font-mono); white-space: nowrap; }
+.wl-name { font-size: 0.65rem; color: var(--text-muted); }
+
+.wl-price-wrap { text-align: right; }
+.wl-price { font-size: 0.78rem; font-family: var(--font-mono); font-weight: 500; color: var(--text-primary); }
+.wl-chg   { font-size: 0.65rem; font-family: var(--font-mono); }
+.wl-chg.up   { color: var(--accent-green); }
+.wl-chg.down { color: var(--accent-red); }
+
+.wl-remove {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.wl-item:hover .wl-remove { opacity: 1; }
+.wl-remove:hover { color: var(--accent-red); background: var(--accent-red-dim); }
+
+.wl-add-btn {
+  width: 100%;
+  padding: 8px;
+  margin-top: 8px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.wl-add-btn:hover { border-color: var(--accent-green); color: var(--accent-green); background: var(--accent-green-dim); }
+
+.wl-add-form {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+}
+.wl-add-form input { flex: 1; padding: 6px 8px; font-size: 0.75rem; text-transform: uppercase; }
+.wl-add-form button { padding: 6px 10px; font-size: 0.72rem; }
+.wl-empty { text-align: center; padding: 20px 0; color: var(--text-muted); font-size: 0.75rem; }
+
+/* ── Heatmap ── */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 6px;
+  padding: 4px 0;
+}
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.04);
+  transition: transform var(--transition), box-shadow var(--transition), filter var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.heatmap-cell:hover {
+  transform: scale(1.06);
+  box-shadow: var(--shadow);
+  z-index: 5;
+  filter: brightness(1.15);
+}
+.hm-sym  { font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.95); font-family: var(--font-mono); letter-spacing: 0.02em; }
+.hm-pct  { font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.9); font-family: var(--font-mono); }
+
+/* Heatmap tooltip */
+.hm-tooltip {
+  position: fixed;
+  z-index: 9000;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 0.75rem;
+  pointer-events: none;
+  box-shadow: var(--shadow-lg);
+  white-space: nowrap;
+  display: none;
+}
+.hm-tooltip.visible { display: block; }
+.hm-tt-row { display: flex; justify-content: space-between; gap: 16px; padding: 2px 0; }
+.hm-tt-label { color: var(--text-secondary); }
+.hm-tt-val   { color: var(--text-primary); font-family: var(--font-mono); font-weight: 500; }
+
+/* ── Fear & Greed ── */
+.fg-gauge-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.fg-value-big  { font-size: 2rem; font-weight: 800; font-family: var(--font-mono); line-height: 1; }
+.fg-label      { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+.fg-updated    { font-size: 0.62rem; color: var(--text-muted); margin-top: 2px; }
+
+.fg-history    { margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 12px; }
+.fg-hist-label { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+.fg-sparkline  { display: flex; align-items: flex-end; gap: 4px; height: 36px; }
+.fg-bar {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.5s ease;
+  cursor: default;
+  position: relative;
+}
+.fg-bar:hover::after {
+  content: attr(data-val);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 2px 5px;
+  font-size: 0.62rem;
+  white-space: nowrap;
+  color: var(--text-primary);
+  pointer-events: none;
+}
+
+.fg-loading { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 0.78rem; }
+
+/* ── Price Table ── */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.table-search {
+  flex: 1;
+  min-width: 140px;
+  max-width: 220px;
+  padding: 7px 10px 7px 32px;
+  font-size: 0.78rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  position: relative;
+}
+.search-wrap { position: relative; flex: 1; max-width: 220px; }
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.sort-indicator { font-size: 0.6rem; margin-left: 3px; opacity: 0.6; }
+.th-sorted .sort-indicator { opacity: 1; color: var(--accent-blue); }
+
+td.price-cell { font-family: var(--font-mono); font-size: 0.78rem; }
+td.change-cell { font-family: var(--font-mono); font-size: 0.75rem; }
+.tbl-action-btns { display: flex; gap: 5px; }
+.tbl-action-btns button {
+  padding: 4px 7px;
+  font-size: 0.65rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.tbl-action-btns button:hover { background: var(--bg-active); color: var(--text-primary); border-color: var(--border-bright); }
+
+.signal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+}
+.signal-buy     { background: var(--accent-green-dim); color: var(--accent-green); border-color: rgba(0,208,132,0.2); }
+.signal-sell    { background: var(--accent-red-dim);   color: var(--accent-red);   border-color: rgba(255,71,87,0.2); }
+.signal-neutral { background: var(--bg-hover);         color: var(--text-secondary);border-color: var(--border-color); }
+
+.no-data-row td { text-align: center; padding: 32px 0; color: var(--text-muted); font-size: 0.78rem; }
+
+/* ── Market Sessions ── */
+.sessions-grid {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.session-card {
+  flex: 1;
+  min-width: 130px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+.session-card.session-open { border-color: rgba(0,208,132,0.3); }
+.session-card.session-opening { border-color: rgba(255,215,0,0.3); }
+
+.sc-name   { font-size: 0.82rem; font-weight: 700; color: var(--text-primary); }
+.sc-hours  { font-size: 0.65rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px; }
+.sc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  margin-top: 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sc-status.open    { background: var(--accent-green-dim); color: var(--accent-green); }
+.sc-status.closed  { background: var(--bg-hover);         color: var(--text-muted);   }
+.sc-status.opening { background: var(--accent-gold-dim);  color: var(--accent-gold);  }
+.sc-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
+
+.sc-countdown { font-size: 0.68rem; color: var(--text-secondary); margin-top: 4px; font-family: var(--font-mono); }
+.sc-overlap   { margin-top: 6px; font-size: 0.62rem; font-weight: 700; color: var(--accent-gold); background: var(--accent-gold-dim); padding: 2px 7px; border-radius: 3px; display: inline-block; }
+
+/* ── Quick Stats ── */
+.quick-stats { min-width: 200px; }
+.qs-grid { display: flex; flex-direction: column; gap: 8px; }
+.qs-row  { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--bg-hover); border-radius: var(--radius); }
+.qs-label { font-size: 0.72rem; color: var(--text-secondary); }
+.qs-val   { font-size: 0.82rem; font-weight: 700; font-family: var(--font-mono); color: var(--text-primary); }
+.qs-val.green { color: var(--accent-green); }
+.qs-val.red   { color: var(--accent-red); }
+
+/* ── Alert Modal ── */
+.alert-modal-overlay {
+  position: fixed; inset: 0; z-index: 8000;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeInFast 0.15s ease;
+}
+.alert-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  min-width: 300px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+  animation: fadeIn 0.2s ease;
+}
+.alert-modal h3 { font-size: 0.9rem; margin-bottom: 16px; color: var(--text-primary); }
+.alert-modal label { font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+.alert-modal input, .alert-modal select { width: 100%; margin-bottom: 12px; }
+.alert-modal-btns { display: flex; gap: 8px; margin-top: 4px; }
+.alert-modal-btns button { flex: 1; }
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+  .dash-row1 { grid-template-columns: 200px 1fr 180px; }
+}
+@media (max-width: 900px) {
+  .dash-row1 { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; }
+  .dash-row1 > .watchlist-card { grid-column: 1 / -1; }
+  .dash-row3 { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .dash-row1 { grid-template-columns: 1fr; }
+  .sessions-grid { flex-direction: column; }
+  .session-card { min-width: unset; }
+}
+</style>
+
+<!-- ═══ HEATMAP TOOLTIP (global) ═══ -->
+<div class="hm-tooltip" id="hm-tooltip"></div>
+
+<div class="dashboard-root">
+
+  <!-- ══════════ PAGE HEADER ══════════ -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">Market Overview</div>
+      <div class="page-subtitle" id="dash-subtitle">Memuat data pasar...</div>
+    </div>
+    <div class="d-flex gap-8 align-center">
+      <button class="btn-ghost btn-sm" onclick="refreshDashboard()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="margin-right:4px">
+          <path d="M11 6.5A4.5 4.5 0 1 1 6.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <polyline points="6.5,2 9,2 9,4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Refresh
+      </button>
+      <span class="text-xs text-muted" id="dash-last-update">—</span>
+    </div>
+  </div>
+
+  <!-- ══════════ ROW 1: Watchlist | Heatmap | Fear&Greed ══════════ -->
+  <div class="dash-row1">
+
+    <!-- WATCHLIST -->
+    <div class="card watchlist-card">
+      <div class="card-header">
+        <div class="watchlist-header" style="width:100%">
+          <span class="card-title">Watchlist</span>
+          <button class="btn-ghost btn-sm" onclick="toggleWLForm()" title="Tambah instrumen">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            Tambah
+          </button>
+        </div>
+      </div>
+      <div class="card-body" style="padding-top:10px;">
+        <div id="wl-add-form-wrap" style="display:none; margin-bottom:8px;">
+          <div class="wl-add-form">
+            <input type="text" id="wl-input" placeholder="BTCUSDT / EURUSD" maxlength="20" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter') addToWatchlistUI()" />
+            <button class="btn-primary btn-sm" onclick="addToWatchlistUI()">+</button>
+            <button class="btn-ghost btn-sm" onclick="toggleWLForm()">✕</button>
+          </div>
+        </div>
+        <div class="watchlist-items" id="watchlist-items">
+          <div class="wl-empty">Memuat watchlist...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HEATMAP -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Market Heatmap</span>
+        <div class="tabs" style="padding:2px; gap:1px;">
+          <button class="tab-btn active" onclick="switchHeatmapTab('crypto', this)">Crypto</button>
+          <button class="tab-btn" onclick="switchHeatmapTab('forex', this)">Forex</button>
+          <button class="tab-btn" onclick="switchHeatmapTab('metals', this)">Metals</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="heatmap-grid" id="heatmap-grid">
+          <!-- Di-render oleh buildHeatmap() -->
+          <div style="color:var(--text-muted);font-size:0.75rem;padding:20px 0;text-align:center;grid-column:1/-1">Memuat heatmap...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FEAR & GREED -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Fear & Greed</span>
+        <span class="text-xs text-muted">Crypto Market</span>
+      </div>
+      <div class="card-body">
+        <div id="fg-container">
+          <div class="fg-loading">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style="animation:spin 1s linear infinite;margin:0 auto 8px;display:block"><circle cx="16" cy="16" r="12" stroke="var(--border-color)" stroke-width="3"/><path d="M16 4 A12 12 0 0 1 28 16" stroke="var(--accent-blue)" stroke-width="3" stroke-linecap="round"/></svg>
+            Memuat...
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /dash-row1 -->
+
+  <!-- ══════════ ROW 2: TABEL HARGA ══════════ -->
+  <div class="dash-row2">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Harga Pasar</span>
+        <div class="d-flex align-center gap-8">
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchTableTab('crypto', this)">Crypto</button>
+            <button class="tab-btn" onclick="switchTableTab('forex', this)">Forex</button>
+            <button class="tab-btn" onclick="switchTableTab('metals', this)">Metals</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body" style="padding:12px 14px;">
+        <!-- Toolbar -->
+        <div class="table-toolbar">
+          <div class="search-wrap">
+            <svg class="search-icon" width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <circle cx="5.5" cy="5.5" r="4.5" stroke="var(--text-muted)" stroke-width="1.5"/>
+              <line x1="9" y1="9" x2="12" y2="12" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <input type="text" class="table-search" id="table-search" placeholder="Cari instrumen..." oninput="filterTable()" />
+          </div>
+          <span class="text-xs text-muted" id="table-count">— instrumen</span>
+        </div>
+
+        <!-- Tabel -->
+        <div class="table-wrap">
+          <table class="data-table" id="price-table">
+            <thead>
+              <tr>
+                <th onclick="sortTable('rank')"    data-col="rank"    style="width:36px">#<span class="sort-indicator">↕</span></th>
+                <th onclick="sortTable('symbol')"  data-col="symbol">Symbol<span class="sort-indicator">↕</span></th>
+                <th onclick="sortTable('price')"   data-col="price">Harga<span class="sort-indicator">↕</span></th>
+                <th onclick="sortTable('change')"  data-col="change">Change<span class="sort-indicator">↕</span></th>
+                <th onclick="sortTable('changePct')"data-col="changePct">%Change<span class="sort-indicator">↕</span></th>
+                <th onclick="sortTable('high')"    data-col="high">High<span class="sort-indicator">↕</span></th>
+                <th onclick="sortTable('low')"     data-col="low">Low<span class="sort-indicator">↕</span></th>
+                <th onclick="sortTable('volume')"  data-col="volume">Volume<span class="sort-indicator">↕</span></th>
+                <th>Signal</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="price-tbody">
+              <tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted);">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div><!-- /dash-row2 -->
+
+  <!-- ══════════ ROW 3: Sessions + Quick Stats ══════════ -->
+  <div class="dash-row3">
+
+    <!-- MARKET SESSIONS -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Market Sessions</span>
+        <span class="text-xs text-muted" id="session-utc-time">UTC --:--:--</span>
+      </div>
+      <div class="card-body">
+        <div class="sessions-grid" id="sessions-grid">
+          <!-- Di-render oleh buildSessions() -->
+        </div>
+      </div>
+    </div>
+
+    <!-- QUICK STATS -->
+    <div class="card quick-stats">
+      <div class="card-header">
+        <span class="card-title">Quick Stats</span>
+      </div>
+      <div class="card-body">
+        <div class="qs-grid" id="quick-stats-grid">
+          <div class="qs-row">
+            <span class="qs-label">Total Instrumen</span>
+            <span class="qs-val" id="qs-total">—</span>
+          </div>
+          <div class="qs-row">
+            <span class="qs-label">Bullish</span>
+            <span class="qs-val green" id="qs-bullish">—</span>
+          </div>
+          <div class="qs-row">
+            <span class="qs-label">Bearish</span>
+            <span class="qs-val red" id="qs-bearish">—</span>
+          </div>
+          <div class="qs-row">
+            <span class="qs-label">Market Cap</span>
+            <span class="qs-val" id="qs-mcap">—</span>
+          </div>
+          <div class="qs-row">
+            <span class="qs-label">BTC Dominance</span>
+            <span class="qs-val" id="qs-btc-dom">—</span>
+          </div>
+          <div class="qs-row">
+            <span class="qs-label">24h Volume</span>
+            <span class="qs-val" id="qs-volume">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /dash-row3 -->
+
+</div><!-- /dashboard-root -->
+
+<!-- Alert Modal -->
+<div id="alert-modal-overlay" class="alert-modal-overlay" style="display:none" onclick="if(event.target===this) closeAlertModal()">
+  <div class="alert-modal">
+    <h3>⚡ Set Price Alert</h3>
+    <label>Instrumen</label>
+    <input type="text" id="alert-sym-display" readonly style="background:var(--bg-secondary)" />
+    <label>Harga Target (USD)</label>
+    <input type="number" id="alert-price-input" placeholder="0.00" step="any" min="0" />
+    <label>Kondisi</label>
+    <select id="alert-direction">
+      <option value="above">Harga Naik Di Atas Target</option>
+      <option value="below">Harga Turun Di Bawah Target</option>
+    </select>
+    <div class="alert-modal-btns">
+      <button class="btn-secondary" onclick="closeAlertModal()">Batal</button>
+      <button class="btn-primary"   onclick="saveAlertModal()">Simpan Alert</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD — Logika utama
+// ═══════════════════════════════════════════════════════════════
+(function () {
+
+  // ── State lokal dashboard ──────────────────────────────────
+  let _activeTableTab = 'crypto';
+  let _activeHeatmapTab = 'crypto';
+  let _sortCol = 'changePct';
+  let _sortDir = 'desc';
+  let _searchQuery = '';
+  let _sessionTimer = null;
+  let _tableData = [];
+  let _alertTarget = null;
+
+  // ═══════════════════════════════════════════
+  // INIT DASHBOARD
+  // ═══════════════════════════════════════════
+  function initDashboard() {
+    buildWatchlist();
+    buildHeatmap(_activeHeatmapTab);
+    buildFearGreed();
+    buildTable(_activeTableTab);
+    buildSessions();
+    buildQuickStats();
+    updateSubtitle();
+    startSessionClock();
+
+    // Listen event pricesUpdated dari api.js
+    document.addEventListener('pricesUpdated', onPricesUpdated);
+
+    // Jika harga masih kosong, tampilkan skeleton
+    if (Object.keys(AppState.prices).length === 0) {
+      document.getElementById('price-tbody').innerHTML =
+        '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted);">Menunggu data pasar...</td></tr>';
+    }
+  }
+
+  function onPricesUpdated() {
+    buildWatchlist();
+    buildHeatmap(_activeHeatmapTab);
+    buildTable(_activeTableTab);
+    buildFearGreed();
+    buildQuickStats();
+    updateSubtitle();
+  }
+
+  // ── Update subtitle & last-update ──
+  function updateSubtitle() {
+    const el = document.getElementById('dash-subtitle');
+    const lu = document.getElementById('dash-last-update');
+    const total = Object.keys(AppState.prices).length;
+    if (el) el.textContent = `${total} instrumen aktif`;
+    if (lu && AppState.lastUpdate.prices) {
+      const d = new Date(AppState.lastUpdate.prices);
+      lu.textContent = `Update: ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+    }
+  }
+
+  window.refreshDashboard = function() {
+    if (window.API) {
+      Promise.allSettled([
+        API.fetchCryptoPrices(),
+        API.fetchForexRates(),
+        API.fetchMetalPrices(),
+      ]).then(() => {
+        API.emitPricesUpdated();
+        if (window.UI) UI.showToast('Data diperbarui', 'success', 2000);
+      });
+    }
+  };
+
+  // ═══════════════════════════════════════════
+  // WATCHLIST
+  // ═══════════════════════════════════════════
+  function buildWatchlist() {
+    const container = document.getElementById('watchlist-items');
+    if (!container) return;
+    const list = AppState.watchlist;
+
+    if (!list || list.length === 0) {
+      container.innerHTML = '<div class="wl-empty">Watchlist kosong.<br>Tambah instrumen di atas.</div>';
+      return;
+    }
+
+    container.innerHTML = list.map((sym, idx) => {
+      const d    = AppState.prices[sym];
+      const name = d ? (d.name || d.display || sym) : sym;
+      const disp = d ? (d.display || sym) : sym;
+      const price= d ? UI.formatPrice(d.price, d.decimals || 2) : '—';
+      const pct  = d ? parseFloat(d.changePct) : 0;
+      const isUp = pct >= 0;
+      const pctStr = d ? `${isUp ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%` : '—';
+
+      return `<div class="wl-item" data-sym="${sym}" data-idx="${idx}"
+        draggable="true"
+        ondragstart="wlDragStart(event, ${idx})"
+        ondragover="wlDragOver(event)"
+        ondrop="wlDrop(event, ${idx})"
+        ondragleave="wlDragLeave(event)"
+        onclick="wlNavigate('${sym}', event)">
+        <span class="wl-drag-handle" title="Drag untuk reorder">⠿</span>
+        <div class="wl-info">
+          <div class="wl-sym">${disp}</div>
+          <div class="wl-name">${name !== disp ? name : ''}</div>
+        </div>
+        <div class="wl-price-wrap">
+          <div class="wl-price" id="wl-price-${sym}">${price}</div>
+          <div class="wl-chg ${isUp ? 'up' : 'down'}" id="wl-chg-${sym}">${pctStr}</div>
+        </div>
+        <button class="wl-remove" onclick="removeFromWL('${sym}', event)" title="Hapus">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  // Drag & Drop Watchlist
+  let _dragFrom = null;
+  window.wlDragStart = function(e, idx) {
+    _dragFrom = idx;
+    setTimeout(() => e.target.classList.add('dragging'), 0);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  window.wlDragOver = function(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('drag-over');
+    e.dataTransfer.dropEffect = 'move';
+  };
+  window.wlDragLeave = function(e) {
+    e.currentTarget.classList.remove('drag-over');
+  };
+  window.wlDrop = function(e, toIdx) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    if (_dragFrom === null || _dragFrom === toIdx) return;
+    const list    = AppState.watchlist;
+    const [moved] = list.splice(_dragFrom, 1);
+    list.splice(toIdx, 0, moved);
+    AppState.saveWatchlist();
+    buildWatchlist();
+    _dragFrom = null;
+  };
+
+  window.wlNavigate = function(sym, e) {
+    if (e && e.target.classList.contains('wl-remove')) return;
+    if (e && e.target.classList.contains('wl-drag-handle')) return;
+    AppState.selectedInstrument = sym;
+    AppState.selectedAssetClass = AppState.prices[sym]?.assetClass || 'crypto';
+    loadPage('chart');
+  };
+
+  window.removeFromWL = function(sym, e) {
+    e.stopPropagation();
+    AppState.removeFromWatchlist(sym);
+    buildWatchlist();
+    if (window.UI) UI.showToast(`${sym} dihapus dari watchlist`, 'info', 2000);
+  };
+
+  window.toggleWLForm = function() {
+    const wrap = document.getElementById('wl-add-form-wrap');
+    const inp  = document.getElementById('wl-input');
+    if (wrap) {
+      const show = wrap.style.display === 'none';
+      wrap.style.display = show ? 'block' : 'none';
+      if (show && inp) inp.focus();
+    }
+  };
+
+  window.addToWatchlistUI = function() {
+    const inp = document.getElementById('wl-input');
+    if (!inp) return;
+    const sym = inp.value.trim().toUpperCase();
+    if (!sym) return;
+    if (AppState.addToWatchlist(sym)) {
+      buildWatchlist();
+      if (window.UI) UI.showToast(`${sym} ditambahkan ke watchlist`, 'success', 2500);
+    } else {
+      if (window.UI) UI.showToast(`${sym} sudah ada di watchlist`, 'warning', 2000);
+    }
+    inp.value = '';
+    toggleWLForm();
+  };
+
+  // ═══════════════════════════════════════════
+  // HEATMAP
+  // ═══════════════════════════════════════════
+  function buildHeatmap(tab) {
+    _activeHeatmapTab = tab;
+    const grid = document.getElementById('heatmap-grid');
+    if (!grid) return;
+
+    let items = [];
+    if (tab === 'crypto') {
+      items = CONFIG.CRYPTO_SYMBOLS.map(c => ({ sym: c.symbol, display: c.display || c.symbol }));
+    } else if (tab === 'forex') {
+      items = CONFIG.FOREX_PAIRS.map(p => ({ sym: `${p.base}${p.quote}`, display: p.pair }));
+    } else {
+      items = [
+        { sym: 'XAUUSD', display: 'XAU/USD' },
+        { sym: 'XAGUSD', display: 'XAG/USD' },
+        { sym: 'XPTUSD', display: 'XPT/USD' },
+        { sym: 'XPDUSD', display: 'XPD/USD' },
+      ];
+    }
+
+    grid.innerHTML = items.map(item => {
+      const d   = AppState.prices[item.sym];
+      const pct = d ? parseFloat(d.changePct) : 0;
+      const bg  = _heatmapColor(pct);
+      const pctStr = isNaN(pct) ? '—' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
+      const shortSym = item.display.replace('/USD','').replace('/','').slice(0, 6);
+
+      return `<div class="heatmap-cell"
+        style="background:${bg}"
+        data-sym="${item.sym}"
+        onclick="heatmapClick('${item.sym}')"
+        onmouseenter="showHmTooltip(event, '${item.sym}')"
+        onmousemove="moveHmTooltip(event)"
+        onmouseleave="hideHmTooltip()">
+        <span class="hm-sym">${shortSym}</span>
+        <span class="hm-pct">${pctStr}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function _heatmapColor(pct) {
+    // Skema: < -3% = merah pekat, -3..0 = merah, 0 = abu, 0..+3 = hijau, > +3 = hijau pekat
+    const clamped = Math.max(-4, Math.min(4, pct));
+    if (clamped < 0) {
+      const t = Math.abs(clamped) / 4;
+      const r = Math.round(100 + t * 155);
+      const g = Math.round(30  - t * 10);
+      const b = Math.round(50  - t * 20);
+      return `rgb(${r},${g},${b})`;
+    } else if (clamped > 0) {
+      const t = clamped / 4;
+      const r = Math.round(15  - t * 5);
+      const g = Math.round(120 + t * 88);
+      const b = Math.round(70  + t * 62);
+      return `rgb(${r},${g},${b})`;
+    }
+    return 'rgb(60,66,74)';
+  }
+
+  window.heatmapClick = function(sym) {
+    AppState.selectedInstrument = sym;
+    AppState.selectedAssetClass = AppState.prices[sym]?.assetClass || 'crypto';
+    loadPage('chart');
+  };
+
+  window.showHmTooltip = function(e, sym) {
+    const d = AppState.prices[sym];
+    if (!d) return;
+    const tt = document.getElementById('hm-tooltip');
+    if (!tt) return;
+    const dec = d.decimals || 2;
+    const pct = parseFloat(d.changePct || 0).toFixed(2);
+    tt.innerHTML = `
+      <div class="hm-tt-row"><span class="hm-tt-label">Symbol</span><span class="hm-tt-val">${d.display || sym}</span></div>
+      <div class="hm-tt-row"><span class="hm-tt-label">Harga</span><span class="hm-tt-val">$${UI.formatPrice(d.price, dec)}</span></div>
+      <div class="hm-tt-row"><span class="hm-tt-label">Change</span><span class="hm-tt-val" style="color:${pct>=0?'var(--accent-green)':'var(--accent-red)'}">${pct>=0?'+':''}${pct}%</span></div>
+      <div class="hm-tt-row"><span class="hm-tt-label">High</span><span class="hm-tt-val">$${UI.formatPrice(d.high, dec)}</span></div>
+      <div class="hm-tt-row"><span class="hm-tt-label">Low</span><span class="hm-tt-val">$${UI.formatPrice(d.low, dec)}</span></div>
+      ${d.volume ? `<div class="hm-tt-row"><span class="hm-tt-label">Volume</span><span class="hm-tt-val">${UI.formatVolume(d.volume)}</span></div>` : ''}
+    `;
+    tt.classList.add('visible');
+    moveHmTooltip(e);
+  };
+  window.moveHmTooltip = function(e) {
+    const tt = document.getElementById('hm-tooltip');
+    if (!tt) return;
+    const margin = 12;
+    const tw = tt.offsetWidth, th = tt.offsetHeight;
+    let x = e.clientX + margin;
+    let y = e.clientY + margin;
+    if (x + tw > window.innerWidth  - 8) x = e.clientX - tw - margin;
+    if (y + th > window.innerHeight - 8) y = e.clientY - th - margin;
+    tt.style.left = x + 'px';
+    tt.style.top  = y + 'px';
+  };
+  window.hideHmTooltip = function() {
+    const tt = document.getElementById('hm-tooltip');
+    if (tt) tt.classList.remove('visible');
+  };
+
+  window.switchHeatmapTab = function(tab, btn) {
+    document.querySelectorAll('[onclick^="switchHeatmapTab"]').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    buildHeatmap(tab);
+  };
+
+  // ═══════════════════════════════════════════
+  // FEAR & GREED GAUGE
+  // ═══════════════════════════════════════════
+  function buildFearGreed() {
+    const container = document.getElementById('fg-container');
+    if (!container) return;
+
+    const fg = AppState.fearGreed;
+    if (!fg) {
+      container.innerHTML = '<div class="fg-loading">Memuat Fear & Greed...</div>';
+      return;
+    }
+
+    const val  = fg.value;
+    const cls  = fg.classification;
+    const color = _fgColor(val);
+
+    // SVG gauge setengah lingkaran
+    const R      = 56;
+    const cx     = 80, cy = 75;
+    const stroke = 10;
+    const total  = Math.PI * R;  // setengah lingkaran
+    const offset = total - (val / 100) * total;
+
+    // Jarum penunjuk
+    const angle  = ((val / 100) * 180) - 90;  // -90 = kiri, +90 = kanan
+    const rad    = (angle * Math.PI) / 180;
+    const needleLen = R - 12;
+    const nx     = cx + needleLen * Math.cos(rad);
+    const ny     = cy + needleLen * Math.sin(rad);
+
+    const histHtml = _buildFGHistory(fg.history);
+    const updated  = window.UI ? UI.formatTimeAgo(fg.timestamp) : '';
+
+    container.innerHTML = `
+      <div class="fg-gauge-wrap">
+        <svg width="160" height="90" viewBox="0 0 160 90" class="fg-gauge-svg">
+          <!-- Zone rings: Extreme Fear, Fear, Neutral, Greed, Extreme Greed -->
+          <path d="M ${cx-R},${cy} A ${R},${R} 0 0,1 ${cx+R},${cy}" fill="none" stroke="#2d1515" stroke-width="${stroke}"/>
+          <!-- Colored arc (filled portion) -->
+          <path d="M ${cx-R},${cy} A ${R},${R} 0 0,1 ${cx+R},${cy}" fill="none"
+            stroke="${color}" stroke-width="${stroke}" stroke-linecap="round"
+            stroke-dasharray="${total}" stroke-dashoffset="${offset}"
+            style="transition:stroke-dashoffset 1s ease,stroke 0.5s ease;transform-origin:${cx}px ${cy}px;transform:scaleX(-1)"/>
+          <!-- Track -->
+          <path d="M ${cx-R},${cy} A ${R},${R} 0 0,1 ${cx+R},${cy}" fill="none" stroke="var(--border-color)" stroke-width="${stroke}" opacity="0.3"/>
+          <!-- Needle -->
+          <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}"
+            stroke="var(--text-primary)" stroke-width="2" stroke-linecap="round"
+            style="transform-origin:${cx}px ${cy}px;transition:all 1s ease"/>
+          <circle cx="${cx}" cy="${cy}" r="4" fill="var(--text-primary)"/>
+          <!-- Labels -->
+          <text x="22" y="${cy+16}" fill="#ff4757" font-size="8" font-family="var(--font-mono)" text-anchor="middle">FEAR</text>
+          <text x="138" y="${cy+16}" fill="#00d084" font-size="8" font-family="var(--font-mono)" text-anchor="middle">GREED</text>
+        </svg>
+
+        <div class="fg-value-big" style="color:${color}">${val}</div>
+        <div class="fg-label"    style="color:${color}">${cls}</div>
+        <div class="fg-updated">Update: ${updated}</div>
+      </div>
+
+      <div class="fg-history">
+        <div class="fg-hist-label">7 Hari Terakhir</div>
+        ${histHtml}
+      </div>
+    `;
+  }
+
+  function _fgColor(val) {
+    if (val <= 25) return '#ff4757';
+    if (val <= 45) return '#ff9f43';
+    if (val <= 55) return '#ffd700';
+    if (val <= 75) return '#2ed573';
+    return '#00d084';
+  }
+
+  function _buildFGHistory(history) {
+    if (!history || history.length === 0) return '';
+    const max = 100;
+    const days = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+    const bars = history.slice(0, 7).reverse().map((h, i) => {
+      const heightPct = (h.value / max) * 100;
+      const color     = _fgColor(h.value);
+      const date      = new Date(h.timestamp);
+      const label     = days[date.getDay()];
+      return `<div class="fg-bar" style="background:${color};height:${heightPct}%;flex:1;position:relative;" data-val="${h.value}" title="${label}: ${h.value} (${h.classification})"></div>`;
+    }).join('');
+    return `<div class="fg-sparkline">${bars}</div>`;
+  }
+
+  // ═══════════════════════════════════════════
+  // PRICE TABLE
+  // ═══════════════════════════════════════════
+  window.switchTableTab = function(tab, btn) {
+    document.querySelectorAll('[onclick^="switchTableTab"]').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    _activeTableTab = tab;
+    _sortCol = 'changePct';
+    _sortDir = 'desc';
+    buildTable(tab);
+  };
+
+  function buildTable(tab) {
+    const tbody = document.getElementById('price-tbody');
+    if (!tbody) return;
+
+    // Kumpulkan data berdasarkan tab
+    let rows = [];
+
+    if (tab === 'crypto') {
+      CONFIG.CRYPTO_SYMBOLS.forEach((c, i) => {
+        const d = AppState.prices[c.symbol];
+        if (!d) return;
+        rows.push({ rank: i+1, sym: c.symbol, display: c.display || c.symbol, ...d });
+      });
+    } else if (tab === 'forex') {
+      CONFIG.FOREX_PAIRS.forEach((p, i) => {
+        const key = `${p.base}${p.quote}`;
+        const d   = AppState.prices[key];
+        if (!d) return;
+        rows.push({ rank: i+1, sym: key, display: p.pair, ...d });
+      });
+    } else {
+      [
+        { sym: 'XAUUSD', display: 'XAU/USD' },
+        { sym: 'XAGUSD', display: 'XAG/USD' },
+        { sym: 'XPTUSD', display: 'XPT/USD' },
+        { sym: 'XPDUSD', display: 'XPD/USD' },
+      ].forEach((m, i) => {
+        const d = AppState.prices[m.sym];
+        if (!d) return;
+        rows.push({ rank: i+1, sym: m.sym, display: m.display, ...d });
+      });
+    }
+
+    _tableData = rows;
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody   = document.getElementById('price-tbody');
+    const countEl = document.getElementById('table-count');
+    if (!tbody) return;
+
+    // Filter
+    let filtered = _tableData;
+    if (_searchQuery) {
+      const q = _searchQuery.toLowerCase();
+      filtered = _tableData.filter(r =>
+        r.sym.toLowerCase().includes(q) ||
+        r.display.toLowerCase().includes(q) ||
+        (r.name || '').toLowerCase().includes(q)
+      );
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      let va = a[_sortCol] ?? 0;
+      let vb = b[_sortCol] ?? 0;
+      if (typeof va === 'string') va = va.toLowerCase();
+      if (typeof vb === 'string') vb = vb.toLowerCase();
+      if (va < vb) return _sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return _sortDir === 'asc' ?  1 : -1;
+      return 0;
+    });
+
+    // Update sort indicator
+    document.querySelectorAll('#price-table th').forEach(th => {
+      th.classList.remove('th-sorted');
+      const indicator = th.querySelector('.sort-indicator');
+      if (indicator) indicator.textContent = '↕';
+    });
+    const sortedTh = document.querySelector(`#price-table th[data-col="${_sortCol}"]`);
+    if (sortedTh) {
+      sortedTh.classList.add('th-sorted');
+      const ind = sortedTh.querySelector('.sort-indicator');
+      if (ind) ind.textContent = _sortDir === 'asc' ? '↑' : '↓';
+    }
+
+    if (countEl) countEl.textContent = `${filtered.length} instrumen`;
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr class="no-data-row"><td colspan="10">Tidak ada data yang cocok</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map((row, idx) => {
+      const dec    = row.decimals || 2;
+      const pct    = parseFloat(row.changePct || 0);
+      const isUp   = pct >= 0;
+      const pctStr = `${isUp ? '+' : ''}${pct.toFixed(2)}%`;
+      const chgStr = `${isUp ? '+' : ''}${UI.formatPrice(Math.abs(row.change || 0), dec)}`;
+      const signal = _getSimpleSignal(row);
+
+      return `<tr id="tr-${row.sym}" data-sym="${row.sym}">
+        <td style="color:var(--text-muted)">${idx + 1}</td>
+        <td>
+          <div style="font-weight:600;font-family:var(--font-mono);font-size:0.78rem">${row.display}</div>
+          ${row.name && row.name !== row.display ? `<div style="font-size:0.62rem;color:var(--text-muted)">${row.name}</div>` : ''}
+        </td>
+        <td class="price-cell" id="price-${row.sym}">$${UI.formatPrice(row.price, dec)}</td>
+        <td class="change-cell" style="color:${isUp ? 'var(--accent-green)' : 'var(--accent-red)'}">
+          ${isUp ? '▲' : '▼'} ${chgStr}
+        </td>
+        <td>
+          <span class="${isUp ? 'badge-up' : 'badge-down'}">${isUp ? '▲' : '▼'} ${Math.abs(pct).toFixed(2)}%</span>
+        </td>
+        <td class="price-cell" style="color:var(--accent-green)">$${UI.formatPrice(row.high, dec)}</td>
+        <td class="price-cell" style="color:var(--accent-red)">$${UI.formatPrice(row.low, dec)}</td>
+        <td style="color:var(--text-secondary);">${UI.formatVolume(row.volume || 0)}</td>
+        <td><span class="signal-badge signal-${signal.cls}">${signal.icon} ${signal.label}</span></td>
+        <td>
+          <div class="tbl-action-btns">
+            <button onclick="openChart('${row.sym}')" title="Buka Chart">📊</button>
+            <button onclick="openAlertModal('${row.sym}', ${row.price})" title="Set Alert">⚡</button>
+            <button onclick="toggleWL_table('${row.sym}', this)" title="Watchlist">${AppState.watchlist.includes(row.sym) ? '★' : '☆'}</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function _getSimpleSignal(d) {
+    // Signal sederhana berdasarkan % change (nanti akan dari signals.js)
+    if (window.Signals && window.Signals.getSignal) {
+      return window.Signals.getSignal(d.sym) || { cls: 'neutral', icon: '⬜', label: 'NEUTRAL' };
+    }
+    const pct = parseFloat(d.changePct || 0);
+    if (pct >  1.5) return { cls: 'buy',     icon: '🟢', label: 'BUY'     };
+    if (pct < -1.5) return { cls: 'sell',    icon: '🔴', label: 'SELL'    };
+    return               { cls: 'neutral', icon: '🟡', label: 'NEUTRAL' };
+  }
+
+  window.filterTable = function() {
+    _searchQuery = (document.getElementById('table-search')?.value || '').trim();
+    renderTable();
+  };
+
+  window.sortTable = function(col) {
+    if (_sortCol === col) {
+      _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      _sortCol = col;
+      _sortDir = col === 'symbol' ? 'asc' : 'desc';
+    }
+    renderTable();
+  };
+
+  window.openChart = function(sym) {
+    AppState.selectedInstrument = sym;
+    loadPage('chart');
+  };
+
+  window.toggleWL_table = function(sym, btn) {
+    if (AppState.watchlist.includes(sym)) {
+      AppState.removeFromWatchlist(sym);
+      if (btn) btn.textContent = '☆';
+      if (window.UI) UI.showToast(`${sym} dihapus dari watchlist`, 'info', 2000);
+    } else {
+      AppState.addToWatchlist(sym);
+      if (btn) btn.textContent = '★';
+      if (window.UI) UI.showToast(`${sym} ditambahkan ke watchlist`, 'success', 2000);
+    }
+    buildWatchlist();
+  };
+
+  // ═══════════════════════════════════════════
+  // ALERT MODAL
+  // ═══════════════════════════════════════════
+  window.openAlertModal = function(sym, price) {
+    _alertTarget = sym;
+    const overlay  = document.getElementById('alert-modal-overlay');
+    const symInput = document.getElementById('alert-sym-display');
+    const priceInp = document.getElementById('alert-price-input');
+    const d        = AppState.prices[sym];
+    if (!overlay) return;
+    if (symInput) symInput.value = (d && d.display) ? d.display : sym;
+    if (priceInp) priceInp.value = d ? parseFloat(d.price).toFixed(d.decimals || 2) : (price || '');
+    overlay.style.display = 'flex';
+  };
+
+  window.closeAlertModal = function() {
+    const overlay = document.getElementById('alert-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
+  };
+
+  window.saveAlertModal = function() {
+    if (!_alertTarget) return;
+    const price = parseFloat(document.getElementById('alert-price-input')?.value);
+    const dir   = document.getElementById('alert-direction')?.value;
+    if (!price || isNaN(price)) {
+      if (window.UI) UI.showToast('Masukkan harga target yang valid', 'warning', 2500);
+      return;
+    }
+    AppState.addPriceAlert(_alertTarget, price, dir);
+    closeAlertModal();
+    const dirLabel = dir === 'above' ? 'di atas' : 'di bawah';
+    if (window.UI) UI.showToast(`Alert ${_alertTarget} ${dirLabel} $${price} disimpan`, 'success', 3000);
+  };
+
+  // ═══════════════════════════════════════════
+  // MARKET SESSIONS
+  // ═══════════════════════════════════════════
+  const SESSION_DEFS = [
+    { key: 'sydney',  name: 'Sydney',   utcStart: 21, utcEnd: 6,  wibStart: 4,  wibEnd: 13, color: '#ffd700', flag: '🇦🇺' },
+    { key: 'tokyo',   name: 'Tokyo',    utcStart: 0,  utcEnd: 9,  wibStart: 7,  wibEnd: 16, color: '#ff6b9d', flag: '🇯🇵' },
+    { key: 'london',  name: 'London',   utcStart: 7,  utcEnd: 16, wibStart: 14, wibEnd: 23, color: '#4dabf7', flag: '🇬🇧' },
+    { key: 'newyork', name: 'New York', utcStart: 13, utcEnd: 22, wibStart: 20, wibEnd: 5,  color: '#00d084', flag: '🇺🇸' },
+  ];
+
+  function isSessionOpen(start, end, h) {
+    if (start > end) return h >= start || h < end;
+    return h >= start && h < end;
+  }
+
+  function buildSessions() {
+    const grid = document.getElementById('sessions-grid');
+    if (!grid) return;
+    grid.innerHTML = SESSION_DEFS.map(s => {
+      const now   = new Date();
+      const utcH  = now.getUTCHours();
+      const open  = isSessionOpen(s.utcStart, s.utcEnd, utcH);
+      // Opening = 30 menit sebelum buka
+      const pre   = !open && isSessionOpen((s.utcStart - 1 + 24) % 24, s.utcStart, utcH);
+
+      const statusCls  = open ? 'open' : (pre ? 'opening' : 'closed');
+      const statusLabel= open ? 'OPEN' : (pre ? 'OPENING SOON' : 'CLOSED');
+      const cardCls    = open ? 'session-open' : (pre ? 'session-opening' : '');
+      const dotHtml    = open ? '<span class="sc-status-dot"></span>' : '';
+
+      // Cek overlap (London + NY overlap)
+      const londonOpen = isSessionOpen(7, 16, utcH);
+      const nyOpen     = isSessionOpen(13, 22, utcH);
+      const overlapHtml= (s.key === 'london' || s.key === 'newyork') && londonOpen && nyOpen
+        ? '<div class="sc-overlap">⚡ HIGH VOLATILITY</div>' : '';
+
+      const utcRange = s.utcStart > s.utcEnd
+        ? `${String(s.utcStart).padStart(2,'0')}:00 – ${String(s.utcEnd).padStart(2,'0')}:00+`
+        : `${String(s.utcStart).padStart(2,'0')}:00 – ${String(s.utcEnd).padStart(2,'0')}:00`;
+
+      const wibStart = (s.utcStart + 7) % 24;
+      const wibEnd   = (s.utcEnd + 7) % 24;
+      const wibRange = `${String(wibStart).padStart(2,'0')}:00 – ${String(wibEnd).padStart(2,'0')}:00 WIB`;
+
+      return `<div class="session-card ${cardCls}" id="sc-${s.key}">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+          <span>${s.flag}</span>
+          <span class="sc-name" style="color:${open || pre ? s.color : 'var(--text-secondary)'}">${s.name}</span>
+        </div>
+        <div class="sc-hours">${utcRange} UTC</div>
+        <div class="sc-hours">${wibRange}</div>
+        <div class="sc-status ${statusCls}">${dotHtml} ${statusLabel}</div>
+        ${overlapHtml}
+        <div class="sc-countdown" id="sc-cd-${s.key}"></div>
+      </div>`;
+    }).join('');
+    updateSessionCountdowns();
+  }
+
+  function updateSessionCountdowns() {
+    const now   = new Date();
+    const utcH  = now.getUTCHours();
+    const utcM  = now.getUTCMinutes();
+    const utcS  = now.getUTCSeconds();
+
+    SESSION_DEFS.forEach(s => {
+      const el   = document.getElementById(`sc-cd-${s.key}`);
+      if (!el) return;
+      const open = isSessionOpen(s.utcStart, s.utcEnd, utcH);
+      const curSeconds = utcH * 3600 + utcM * 60 + utcS;
+
+      let remaining;
+      if (open) {
+        const closeSeconds = s.utcEnd * 3600;
+        remaining = closeSeconds > curSeconds
+          ? closeSeconds - curSeconds
+          : (86400 - curSeconds + closeSeconds);
+        const h = Math.floor(remaining / 3600);
+        const m = Math.floor((remaining % 3600) / 60);
+        el.textContent = `Tutup dalam ${h}j ${m}m`;
+      } else {
+        const openSeconds = s.utcStart * 3600;
+        remaining = openSeconds > curSeconds
+          ? openSeconds - curSeconds
+          : (86400 - curSeconds + openSeconds);
+        const h = Math.floor(remaining / 3600);
+        const m = Math.floor((remaining % 3600) / 60);
+        el.textContent = `Buka dalam ${h}j ${m}m`;
+      }
+    });
+  }
+
+  function startSessionClock() {
+    const clockEl = document.getElementById('session-utc-time');
+    const tick = () => {
+      const now = new Date();
+      if (clockEl) {
+        const h = String(now.getUTCHours()).padStart(2,'0');
+        const m = String(now.getUTCMinutes()).padStart(2,'0');
+        const s = String(now.getUTCSeconds()).padStart(2,'0');
+        clockEl.textContent = `UTC ${h}:${m}:${s}`;
+      }
+      updateSessionCountdowns();
+    };
+    tick();
+    _sessionTimer = setInterval(() => {
+      tick();
+      // Rebuild setiap menit untuk update status buka/tutup
+      if (new Date().getUTCSeconds() === 0) buildSessions();
+    }, 1000);
+  }
+
+  // ═══════════════════════════════════════════
+  // QUICK STATS
+  // ═══════════════════════════════════════════
+  function buildQuickStats() {
+    const prices = AppState.prices;
+    const total  = Object.keys(prices).length;
+    let bullish  = 0, bearish = 0;
+    Object.values(prices).forEach(d => {
+      if (parseFloat(d.changePct) > 0)  bullish++;
+      else if (parseFloat(d.changePct) < 0) bearish++;
+    });
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('qs-total',   total);
+    set('qs-bullish', bullish);
+    set('qs-bearish', bearish);
+
+    if (AppState.marketGlobal) {
+      const g = AppState.marketGlobal;
+      set('qs-mcap',    UI.formatNumber(g.totalMarketCap));
+      set('qs-btc-dom', `${g.btcDominance.toFixed(1)}%`);
+      set('qs-volume',  UI.formatNumber(g.totalVolume));
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // CLEANUP saat navigasi ke halaman lain
+  // ═══════════════════════════════════════════
+  document.addEventListener('pricesUpdated', onPricesUpdated);
+  window.addEventListener('pagehide', () => {
+    document.removeEventListener('pricesUpdated', onPricesUpdated);
+    if (_sessionTimer) clearInterval(_sessionTimer);
+  });
+
+  // ── Boot ──
+  initDashboard();
+
+})();
+</script>

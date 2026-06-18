@@ -1,0 +1,1580 @@
+<!-- ═══════════════════════════════════════════════════════════════
+     ProTrader Analytics — pages/screener.html  (v3.0)
+     Multi-instrument screener page
+     Bergantung pada: config.js · api.js · ui.js · indicators.js
+     Dipanggil via: loadPage('screener') dari index.html
+     ═══════════════════════════════════════════════════════════════ -->
+
+<!-- ══════════════════════════════════════════════
+     SCREENER PAGE — WRAPPER
+══════════════════════════════════════════════ -->
+<div class="screener-page" id="screener-page">
+
+  <!-- ── PAGE HEADER ── -->
+  <div class="page-header" style="margin-bottom:14px;">
+    <div>
+      <div class="page-title">SCREENER MARKET DATA</div>
+      <div class="page-subtitle" id="screener-last-update">Memuat data…</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button class="btn-secondary btn-sm" id="screener-export-btn" onclick="exportScreenerCSV()" title="Export ke CSV">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="margin-right:4px;">
+          <path d="M2 9v2h9V9M6.5 1v6.5M4 5.5l2.5 2.5 2.5-2.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>Export CSV
+      </button>
+      <button class="btn-secondary btn-sm" id="screener-reset-btn" onclick="resetScreenerFilters()" title="Reset filter">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="margin-right:4px;">
+          <path d="M2 6.5a4.5 4.5 0 1 1 1.06 2.9M2 10V6.5h3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>Reset
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       KOMPONEN 1: FILTER & SORT BAR
+  ══════════════════════════════════════════════ -->
+  <div class="screener-filter-bar" id="screener-filter-bar">
+
+    <!-- Row 1: Dropdown filters -->
+    <div class="screener-filter-row">
+      <!-- Signal filter -->
+      <div class="filter-group">
+        <label class="filter-label">Signal</label>
+        <select class="filter-select" id="filter-signal" onchange="applyFilters()">
+          <option value="all">All Signals</option>
+          <option value="STRONG BUY">Strong Buy</option>
+          <option value="BUY">Buy</option>
+          <option value="NEUTRAL">Neutral</option>
+          <option value="SELL">Sell</option>
+          <option value="STRONG SELL">Strong Sell</option>
+        </select>
+      </div>
+
+      <!-- Kategori -->
+      <div class="filter-group">
+        <label class="filter-label">Instrumen</label>
+        <select class="filter-select" id="filter-category" onchange="applyFilters()">
+          <option value="all">All</option>
+          <option value="crypto">Crypto</option>
+          <option value="forex">Forex</option>
+          <option value="metal">Metal</option>
+        </select>
+      </div>
+
+      <!-- Timeframe -->
+      <div class="filter-group">
+        <label class="filter-label">Timeframe</label>
+        <select class="filter-select" id="filter-timeframe" onchange="screenerChangeTimeframe(this.value)">
+          <option value="H1">H1</option>
+          <option value="H4">H4</option>
+          <option value="D1">D1</option>
+        </select>
+      </div>
+
+      <!-- Sort -->
+      <div class="filter-group">
+        <label class="filter-label">Sort</label>
+        <select class="filter-select" id="filter-sort" onchange="applyFilters()">
+          <option value="signal">Signal Strength</option>
+          <option value="change">Change %</option>
+          <option value="name">Name (A–Z)</option>
+          <option value="confluence">Confluence Score</option>
+          <option value="rsi">RSI</option>
+        </select>
+      </div>
+
+      <!-- Counter -->
+      <div class="screener-counter" id="screener-counter">
+        <span id="screener-count-shown">—</span> / <span id="screener-count-total">—</span> instrumen
+      </div>
+    </div>
+
+    <!-- Row 2: Signal toggle buttons -->
+    <div class="screener-signal-toggles" id="screener-signal-toggles">
+      <span class="filter-label" style="margin-right:4px;">Filter cepat:</span>
+      <button class="signal-toggle-btn" data-signal="STRONG SELL" onclick="toggleSignalFilter('STRONG SELL')" title="Strong Sell">
+        Strong Sell <span class="toggle-count" id="cnt-ss">0</span>
+      </button>
+      <button class="signal-toggle-btn" data-signal="SELL" onclick="toggleSignalFilter('SELL')" title="Sell">
+        Sell <span class="toggle-count" id="cnt-s">0</span>
+      </button>
+      <button class="signal-toggle-btn" data-signal="NEUTRAL" onclick="toggleSignalFilter('NEUTRAL')" title="Neutral">
+        Neutral <span class="toggle-count" id="cnt-n">0</span>
+      </button>
+      <button class="signal-toggle-btn" data-signal="BUY" onclick="toggleSignalFilter('BUY')" title="Buy">
+        Buy <span class="toggle-count" id="cnt-b">0</span>
+      </button>
+      <button class="signal-toggle-btn" data-signal="STRONG BUY" onclick="toggleSignalFilter('STRONG BUY')" title="Strong Buy">
+        Strong Buy <span class="toggle-count" id="cnt-sb">0</span>
+      </button>
+    </div>
+
+  </div><!-- /filter-bar -->
+
+  <!-- ══════════════════════════════════════════════
+       KOMPONEN 2: SCREENER TABLE
+  ══════════════════════════════════════════════ -->
+  <div class="screener-table-wrap card" id="screener-table-wrap">
+    <div class="screener-table-scroll" id="screener-table-scroll">
+      <table class="screener-table" id="screener-table">
+        <thead id="screener-thead">
+          <tr>
+            <th class="th-sortable" data-col="name"      onclick="sortTable('name')">Symbol <span class="sort-icon" id="si-name"></span></th>
+            <th class="th-sortable" data-col="price"     onclick="sortTable('price')">Price <span class="sort-icon" id="si-price"></span></th>
+            <th class="th-sortable" data-col="change"    onclick="sortTable('change')">Change% <span class="sort-icon" id="si-change"></span></th>
+            <th class="th-sortable" data-col="rsi"       onclick="sortTable('rsi')">RSI <span class="sort-icon" id="si-rsi"></span></th>
+            <th>MACD</th>
+            <th>MA Signal</th>
+            <th>BB Position</th>
+            <th>Volume</th>
+            <th class="th-sortable" data-col="confluence" onclick="sortTable('confluence')">Confluence <span class="sort-icon" id="si-confluence"></span></th>
+            <th class="th-sortable" data-col="signal"    onclick="sortTable('signal')">Signal <span class="sort-icon" id="si-signal"></span></th>
+          </tr>
+        </thead>
+        <tbody id="screener-tbody">
+          <tr><td colspan="10" class="screener-loading">
+            <div class="skeleton-pulse" style="height:160px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="animation:spin 1s linear infinite;margin-right:8px;">
+                <circle cx="10" cy="10" r="8" stroke="var(--border-color)" stroke-width="2"/>
+                <path d="M10 2 A8 8 0 0 1 18 10" stroke="var(--accent-blue)" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Memuat screener data…
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       ROW BAWAH: HEATMAP + STATS + ALERT
+  ══════════════════════════════════════════════ -->
+  <div class="screener-bottom-grid">
+
+    <!-- ── KOMPONEN 3: HEATMAP BESAR ── -->
+    <div class="card screener-heatmap-card" id="screener-heatmap-card">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span class="card-title">🗺 Market Heatmap</span>
+        <div class="tabs" style="font-size:0.7rem;">
+          <button class="tab-btn active" id="hm-tab-all"    onclick="heatmapTab('all')">All</button>
+          <button class="tab-btn"        id="hm-tab-forex"  onclick="heatmapTab('forex')">Forex</button>
+          <button class="tab-btn"        id="hm-tab-crypto" onclick="heatmapTab('crypto')">Crypto</button>
+          <button class="tab-btn"        id="hm-tab-metal"  onclick="heatmapTab('metal')">Metal</button>
+        </div>
+      </div>
+      <div id="screener-heatmap-inner"></div>
+    </div>
+
+    <!-- ── KOMPONEN 4 + ALERT: STATS & ALERTS ── -->
+    <div class="screener-right-col">
+
+      <!-- Summary Stats -->
+      <div class="card screener-stats-card" id="screener-stats-card">
+        <div class="card-title" style="margin-bottom:12px;">📈 Summary Stats</div>
+        <div class="stats-grid" id="screener-stats-grid">
+          <div class="stat-row"><span class="stat-label">Total</span><span class="stat-val" id="stat-total">—</span></div>
+          <div class="stat-row">
+            <span class="stat-label">Bullish</span>
+            <span class="stat-val text-green" id="stat-bullish">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Bearish</span>
+            <span class="stat-val text-red" id="stat-bearish">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Neutral</span>
+            <span class="stat-val" id="stat-neutral">—</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-row">
+            <span class="stat-label">Most Bullish</span>
+            <span class="stat-val text-green" id="stat-most-bullish">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Most Bearish</span>
+            <span class="stat-val text-red" id="stat-most-bearish">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Top Setup</span>
+            <span class="stat-val text-gold" id="stat-top-setup">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Price Alert Manager -->
+      <div class="card screener-alert-card" id="screener-alert-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="card-title">🔔 Price Alerts</div>
+          <button class="btn-primary btn-sm" onclick="openAlertModal(null)">+ Add Alert</button>
+        </div>
+
+        <!-- Alert list -->
+        <div class="alert-list-wrap" id="alert-list-wrap">
+          <div id="alert-empty" class="alert-empty" style="display:none;">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style="opacity:0.3;margin-bottom:6px;">
+              <path d="M14 4a7 7 0 0 1 7 7v4l2 3H5l2-3v-4a7 7 0 0 1 7-7ZM11 21h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <div>Belum ada price alert.</div>
+          </div>
+          <table class="alert-table" id="alert-table">
+            <thead>
+              <tr>
+                <th>Simbol</th>
+                <th>Target</th>
+                <th>Kondisi</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="alert-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /right-col -->
+  </div><!-- /bottom-grid -->
+
+</div><!-- /screener-page -->
+
+<!-- ══════════════════════════════════════════════
+     MODAL: ADD / EDIT ALERT
+══════════════════════════════════════════════ -->
+<div id="alert-modal-overlay" class="modal-overlay" style="display:none;" onclick="closeAlertModal(event)">
+  <div class="modal-box" id="alert-modal-box">
+    <div class="modal-header">
+      <span class="modal-title" id="alert-modal-title">➕ Tambah Price Alert</span>
+      <button class="modal-close" onclick="closeAlertModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Instrumen</label>
+        <select class="filter-select w100" id="alert-symbol-select"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target Price <span style="color:var(--text-muted);font-size:0.72rem;" id="alert-current-price-hint"></span></label>
+        <input type="number" class="w100" id="alert-price-input" placeholder="Masukkan target harga…" step="any" oninput="alertModalPreview()"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kondisi</label>
+        <div style="display:flex;gap:8px;">
+          <label class="radio-label">
+            <input type="radio" name="alert-direction" value="above" id="alert-dir-above" checked onchange="alertModalPreview()"> Price ≥ Target (Above)
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="alert-direction" value="below" id="alert-dir-below" onchange="alertModalPreview()"> Price ≤ Target (Below)
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Catatan (opsional)</label>
+        <input type="text" class="w100" id="alert-notes-input" placeholder="e.g. Level support utama…" maxlength="120"/>
+      </div>
+      <div class="alert-preview" id="alert-preview"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary btn-sm" onclick="closeAlertModal()">Batal</button>
+      <button class="btn-primary btn-sm"   onclick="saveAlert()">Simpan Alert</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREENER STYLES
+══════════════════════════════════════════════ -->
+<style>
+/* ─── Layout ─── */
+.screener-page { animation: fadeIn 0.3s ease; }
+
+.screener-filter-bar {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.screener-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.filter-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+.filter-select {
+  font-size: 0.78rem;
+  padding: 5px 8px;
+  min-width: 110px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.filter-select:focus { border-color: var(--accent-blue); }
+
+.screener-counter {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.screener-signal-toggles {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.signal-toggle-btn {
+  padding: 4px 10px;
+  font-size: 0.73rem;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.signal-toggle-btn:hover,
+.signal-toggle-btn.active {
+  background: var(--bg-active);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+}
+.signal-toggle-btn.active { border-color: var(--accent-blue); }
+
+.toggle-count {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  background: var(--bg-active);
+  border-radius: 10px;
+  padding: 1px 5px;
+}
+
+/* ─── Screener Table ─── */
+.screener-table-wrap {
+  margin-bottom: 14px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.screener-table-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 370px;
+}
+
+.screener-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.screener-table thead tr {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg-secondary);
+}
+
+.screener-table th {
+  padding: 9px 12px;
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.th-sortable { cursor: pointer; }
+.th-sortable:hover { color: var(--text-primary); }
+.sort-icon { font-size: 0.6rem; margin-left: 2px; }
+
+.screener-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(48,54,61,0.5);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.screener-table tbody tr { cursor: pointer; transition: background 0.12s; }
+.screener-table tbody tr:hover td { background: var(--bg-hover); }
+.screener-table tbody tr:last-child td { border-bottom: none; }
+
+/* Row coloring */
+.screener-table tbody tr.row-buy  td { background: rgba(0,208,132,0.04); }
+.screener-table tbody tr.row-sell td { background: rgba(255,71,87,0.04); }
+.screener-table tbody tr.row-buy:hover  td { background: rgba(0,208,132,0.09); }
+.screener-table tbody tr.row-sell:hover td { background: rgba(255,71,87,0.09); }
+
+/* Symbol badge */
+.sym-badge {
+  display: inline-block;
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: 4px;
+  vertical-align: middle;
+  letter-spacing: 0.05em;
+}
+.sym-badge-C { background: rgba(77,171,247,0.18); color: var(--accent-blue); }
+.sym-badge-F { background: rgba(255,215,0,0.18); color: var(--accent-gold); }
+.sym-badge-M { background: rgba(184,146,255,0.18); color: var(--accent-purple); }
+
+/* Price badge */
+.price-cell { font-family: var(--font-mono); font-size: 0.78rem; }
+.price-up   { color: var(--accent-green); }
+.price-down { color: var(--accent-red); }
+
+/* Change cell */
+.change-up   { color: var(--accent-green); font-family: var(--font-mono); }
+.change-down { color: var(--accent-red);   font-family: var(--font-mono); }
+
+/* RSI mini gauge */
+.rsi-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.rsi-bar-track {
+  width: 44px;
+  height: 5px;
+  background: var(--bg-active);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.rsi-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+/* MACD arrow */
+.macd-up   { color: var(--accent-green); }
+.macd-down { color: var(--accent-red); }
+.macd-flat { color: var(--text-muted); }
+
+/* Confluence score */
+.confluence-wrap { display: flex; align-items: center; gap: 6px; }
+.confluence-bar-track {
+  width: 50px;
+  height: 5px;
+  background: var(--bg-active);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.confluence-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+
+/* Signal badge */
+.signal-badge {
+  display: inline-block;
+  font-size: 0.67rem;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.sig-strong-buy  { background: rgba(0,208,132,0.2);  color: #00d084; border: 1px solid rgba(0,208,132,0.35); }
+.sig-buy         { background: rgba(0,208,132,0.1);  color: #00d084; border: 1px solid rgba(0,208,132,0.2);  }
+.sig-neutral     { background: rgba(125,133,144,0.12); color: var(--text-secondary); border: 1px solid var(--border-color); }
+.sig-sell        { background: rgba(255,71,87,0.1);  color: #ff4757; border: 1px solid rgba(255,71,87,0.2);  }
+.sig-strong-sell { background: rgba(255,71,87,0.2);  color: #ff4757; border: 1px solid rgba(255,71,87,0.35); }
+
+/* ─── Bottom grid ─── */
+.screener-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 14px;
+  align-items: start;
+}
+
+.screener-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ─── Heatmap ─── */
+.screener-heatmap-card { padding: 16px; }
+.screener-heatmap-sections { display: flex; flex-direction: column; gap: 14px; }
+.heatmap-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.large-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 6px;
+}
+.large-heatmap-cell {
+  border-radius: var(--radius);
+  padding: 10px 8px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: 72px;
+  justify-content: center;
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.large-heatmap-cell:hover {
+  transform: scale(1.04);
+  box-shadow: var(--shadow-sm);
+  z-index: 2;
+}
+.hm-sym  { font-size: 0.7rem; font-weight: 700; color: #fff; text-align:center; }
+.hm-price{ font-size: 0.65rem; font-family: var(--font-mono); color: rgba(255,255,255,0.8); }
+.hm-chg  { font-size: 0.72rem; font-weight: 600; }
+.hm-signal-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  position: absolute; top: 5px; right: 5px;
+}
+.hm-signal-dot.sig-buy-dot  { background: var(--accent-green); }
+.hm-signal-dot.sig-sell-dot { background: var(--accent-red); }
+
+/* Tooltip custom */
+.hm-tooltip {
+  position: fixed;
+  z-index: 9999;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 0.75rem;
+  pointer-events: none;
+  box-shadow: var(--shadow);
+  min-width: 160px;
+  display: none;
+}
+.hm-tooltip.visible { display: block; }
+.hm-tooltip-row { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 3px; }
+.hm-tooltip-label { color: var(--text-muted); }
+.hm-tooltip-val   { font-family: var(--font-mono); color: var(--text-primary); }
+
+/* ─── Stats card ─── */
+.screener-stats-card { padding: 16px; }
+.stats-grid { display: flex; flex-direction: column; gap: 7px; }
+.stat-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.stat-label { font-size: 0.73rem; color: var(--text-secondary); }
+.stat-val   { font-size: 0.78rem; font-family: var(--font-mono); font-weight: 600; }
+.stat-divider { height: 1px; background: var(--border-color); margin: 4px 0; }
+
+/* ─── Alert card ─── */
+.screener-alert-card { padding: 16px; }
+.alert-list-wrap { max-height: 220px; overflow-y: auto; }
+.alert-empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 24px 0;
+  font-size: 0.75rem; color: var(--text-muted); gap: 6px; text-align: center;
+}
+.alert-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.73rem;
+}
+.alert-table th {
+  padding: 5px 8px;
+  text-align: left;
+  font-size: 0.63rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-color);
+}
+.alert-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(48,54,61,0.4);
+  vertical-align: middle;
+}
+.alert-table tbody tr:last-child td { border-bottom: none; }
+.alert-triggered { opacity: 0.5; }
+.alert-active-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  display: inline-block; margin-right: 4px; vertical-align: middle;
+  background: var(--accent-green);
+}
+.alert-active-dot.inactive { background: var(--text-muted); }
+
+/* ─── Modal ─── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 9990;
+  background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeInFast 0.15s ease;
+}
+.modal-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 420px; max-width: 95vw;
+  box-shadow: var(--shadow-lg);
+  animation: fadeIn 0.2s ease;
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.modal-title  { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
+.modal-close  { font-size: 1.3rem; color: var(--text-muted); padding: 0 4px; cursor: pointer; }
+.modal-close:hover { color: var(--text-primary); }
+.modal-body   { display: flex; flex-direction: column; gap: 14px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); }
+.w100       { width: 100%; }
+
+.radio-label { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; cursor: pointer; }
+input[type="radio"] { accent-color: var(--accent-blue); cursor: pointer; }
+
+.alert-preview {
+  font-size: 0.75rem;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  min-height: 32px;
+  line-height: 1.5;
+}
+
+.screener-loading { text-align: center; padding: 24px; color: var(--text-secondary); }
+
+/* ─── Buttons ─── */
+.btn-primary {
+  background: var(--accent-blue);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.88; }
+.btn-secondary {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  transition: all 0.15s;
+}
+.btn-secondary:hover { color: var(--text-primary); border-color: var(--border-bright); }
+.btn-danger {
+  background: var(--accent-red-dim);
+  border: 1px solid rgba(255,71,87,0.25);
+  color: var(--accent-red);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  padding: 3px 7px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-danger:hover { background: rgba(255,71,87,0.25); }
+.btn-sm { padding: 4px 10px; font-size: 0.73rem; }
+
+/* ─── Responsive ─── */
+@media (max-width: 1100px) {
+  .screener-bottom-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .screener-filter-row  { gap: 6px; }
+  .screener-table th, .screener-table td { padding: 6px 8px; }
+}
+</style>
+
+<!-- ══════════════════════════════════════════════
+     SCREENER JAVASCRIPT
+══════════════════════════════════════════════ -->
+<script>
+(function() {
+'use strict';
+
+/* ─────────────────────────────────────────────────────
+   INTERNAL STATE
+───────────────────────────────────────────────────── */
+const _S = {
+  instruments:   [],   // semua instrumen yg sudah diproses
+  filtered:      [],   // setelah filter
+  currentTF:    'H1',
+  sortCol:      'signal',
+  sortDir:      'desc',
+  activeSignal:  null, // toggle filter cepat
+  hmTab:        'all',
+  alertEditId:   null,
+  ohlcvCache:    {},   // { symbol_TF: ohlcvArray }
+};
+
+/* ─────────────────────────────────────────────────────
+   INIT — dipanggil saat page di-load
+───────────────────────────────────────────────────── */
+window.initScreenerPage = function() {
+  console.log('[Screener] initScreenerPage()');
+
+  // Populate alert symbol dropdown
+  _populateAlertSymbolSelect();
+
+  // Render alert list dari AppState
+  renderAlertList();
+
+  // Bangun instrumen & tabel
+  buildAllInstruments();
+
+  // Update heatmap
+  buildLargeHeatmap();
+
+  // Listener event pricesUpdated
+  document.addEventListener('pricesUpdated', _onPricesUpdated);
+
+  // Auto-refresh tabel setiap 30 detik
+  _S._refreshInterval = setInterval(() => {
+    buildAllInstruments();
+    buildLargeHeatmap();
+  }, 30000);
+};
+
+// Cleanup saat page di-unload
+window._screenerCleanup = function() {
+  document.removeEventListener('pricesUpdated', _onPricesUpdated);
+  if (_S._refreshInterval) clearInterval(_S._refreshInterval);
+};
+
+function _onPricesUpdated() {
+  buildAllInstruments();
+  buildLargeHeatmap();
+  if (window.UI && window.UI.checkPriceAlerts) window.UI.checkPriceAlerts();
+}
+
+/* ─────────────────────────────────────────────────────
+   BUILD INSTRUMENTS — ambil semua dari CONFIG
+───────────────────────────────────────────────────── */
+async function buildAllInstruments() {
+  const prices     = (window.AppState && window.AppState.prices) || {};
+  const metals     = (window.AppState && window.AppState.metals) || {};
+  const forexRates = (window.AppState && window.AppState.forexRates) || {};
+  const cfg        = window.CONFIG || {};
+  const instruments = [];
+
+  // ── CRYPTO ──
+  const cryptoList = cfg.CRYPTO_SYMBOLS || [];
+  cryptoList.forEach(c => {
+    const p = prices[c.symbol] || {};
+    instruments.push({
+      symbol:    c.symbol,
+      display:   c.display || c.symbol,
+      name:      c.name || c.symbol,
+      category:  'crypto',
+      price:     parseFloat(p.price   || 0),
+      change:    parseFloat(p.changePct || 0),
+      volume:    parseFloat(p.volume  || 0),
+      volAvg:    parseFloat(p.quoteVolume || 0),
+      decimals:  c.decimals || 2,
+    });
+  });
+
+  // ── METALS ──
+  const metalList = cfg.METAL_SYMBOLS || [];
+  metalList.forEach(m => {
+    const p = metals[m.symbol] || prices[m.symbol] || {};
+    instruments.push({
+      symbol:    m.symbol,
+      display:   m.display || m.symbol,
+      name:      m.name || m.symbol,
+      category:  'metal',
+      price:     parseFloat(p.price   || 0),
+      change:    parseFloat(p.changePct || 0),
+      volume:    parseFloat(p.volume  || 0),
+      volAvg:    0,
+      decimals:  m.decimals || 2,
+    });
+  });
+
+  // ── FOREX ──
+  const forexList = cfg.FOREX_PAIRS || [];
+  forexList.forEach(f => {
+    const key = f.base + f.quote;
+    const p   = prices[key] || forexRates[key] || {};
+    instruments.push({
+      symbol:    key,
+      display:   f.pair,
+      name:      f.pair,
+      category:  'forex',
+      price:     parseFloat(p.price   || p.rate   || 0),
+      change:    parseFloat(p.changePct || p.change || 0),
+      volume:    0,
+      volAvg:    0,
+      decimals:  f.pip < 0.001 ? 3 : 5,
+    });
+  });
+
+  // ── Kalkulasi sinyal (ambil dari OHLCV cache atau simulasi dari price) ──
+  for (const ins of instruments) {
+    _calcSignalForInstrument(ins);
+  }
+
+  _S.instruments = instruments;
+  _updateSignalCounts();
+  applyFilters();
+  updateSummaryStats();
+
+  // Update timestamp
+  const now = new Date();
+  const el  = document.getElementById('screener-last-update');
+  if (el) el.textContent = `Update: ${now.toLocaleTimeString('id-ID')} — TF: ${_S.currentTF}`;
+}
+
+/* Hitung sinyal dari OHLCV cache atau fallback dari price data */
+function _calcSignalForInstrument(ins) {
+  const cacheKey = ins.symbol + '_' + _S.currentTF;
+  const ohlcv    = (window.AppState && window.AppState.ohlcv && window.AppState.ohlcv[cacheKey])
+                   || _S.ohlcvCache[cacheKey]
+                   || null;
+
+  if (ohlcv && ohlcv.length >= 30 && window.Indicators) {
+    const sigs    = window.Indicators.getSignals(ohlcv);
+    const closes  = ohlcv.map(c => c.close);
+    const last    = closes.length - 1;
+
+    // MA200
+    const ema200arr = window.Indicators.calcEMA(closes, 200);
+    const ema200    = ema200arr[last];
+    const price     = closes[last];
+
+    // BB position
+    const bb    = window.Indicators.calcBollingerBands(closes, 20, 2);
+    const bbPos = _getBBPosition(price, bb.upper[last], bb.middle[last], bb.lower[last]);
+
+    // Volumes
+    const volumes = ohlcv.map(c => c.volume);
+    const volAvg  = volumes.slice(-20).reduce((a,b) => a+b, 0) / 20;
+    const volLast = volumes[last];
+
+    // Confluence score /20
+    const score = _calcConfluence(sigs, price, ema200, bb, last);
+
+    ins.rsi          = sigs.rsi.value;
+    ins.rsiSignal    = sigs.rsi.signal;
+    ins.macdVal      = sigs.macd.value;
+    ins.macdSignal   = sigs.macd.signal;
+    ins.maSignal     = sigs.ma.signal;
+    ins.ema200       = ema200;
+    ins.bbPosition   = bbPos;
+    ins.volumeStatus = volLast > volAvg * 1.2 ? 'Above Avg' : 'Below Avg';
+    ins.confluence   = score;
+    ins.signal       = sigs.overall.direction;
+    ins.signalScore  = sigs.overall.score;
+
+  } else {
+    // Fallback: sinyal berdasarkan change% & harga
+    ins.rsi          = null;
+    ins.rsiSignal    = 'NEUTRAL';
+    ins.macdVal      = null;
+    ins.macdSignal   = 'NEUTRAL';
+    ins.maSignal     = 'NEUTRAL';
+    ins.ema200       = null;
+    ins.bbPosition   = 'Middle Band';
+    ins.volumeStatus = ins.volume > 0 ? 'Data' : '—';
+    ins.confluence   = 0;
+    // Estimasi sinyal dari change%
+    const ch = ins.change;
+    if      (ch >  3)  { ins.signal = 'STRONG BUY';  ins.signalScore =  75; }
+    else if (ch >  1)  { ins.signal = 'BUY';          ins.signalScore =  35; }
+    else if (ch < -3)  { ins.signal = 'STRONG SELL';  ins.signalScore = -75; }
+    else if (ch < -1)  { ins.signal = 'SELL';          ins.signalScore = -35; }
+    else               { ins.signal = 'NEUTRAL';       ins.signalScore =   0; }
+  }
+}
+
+function _getBBPosition(price, upper, mid, lower) {
+  if (isNaN(upper) || isNaN(lower)) return 'Middle Band';
+  if (price >= upper) return 'Upper Band';
+  if (price <= lower) return 'Lower Band';
+  if (price > mid)    return 'Upper Half';
+  return 'Lower Half';
+}
+
+function _calcConfluence(sigs, price, ema200, bb, last) {
+  // Skor 0–20
+  let score = 0;
+  const map = { BUY: 1, SELL: 1, NEUTRAL: 0 };
+  if (map[sigs.rsi.signal])  score += 3;
+  if (map[sigs.macd.signal]) score += 4;
+  if (map[sigs.ma.signal])   score += 4;
+  if (map[sigs.bb.signal])   score += 3;
+  if (map[sigs.stoch.signal])score += 3;
+  if (!isNaN(ema200)) score += 3; // data tersedia
+  return Math.min(score, 20);
+}
+
+/* ─────────────────────────────────────────────────────
+   FILTER & SORT
+───────────────────────────────────────────────────── */
+window.applyFilters = function() {
+  const sigFilter  = document.getElementById('filter-signal')?.value   || 'all';
+  const catFilter  = document.getElementById('filter-category')?.value || 'all';
+  const sortBy     = document.getElementById('filter-sort')?.value     || 'signal';
+
+  let list = [..._S.instruments];
+
+  // Filter kategori
+  if (catFilter !== 'all') {
+    list = list.filter(i => i.category === catFilter);
+  }
+
+  // Filter signal (dropdown)
+  if (sigFilter !== 'all') {
+    list = list.filter(i => i.signal === sigFilter);
+  }
+
+  // Filter toggle cepat (override dropdown jika aktif)
+  if (_S.activeSignal) {
+    list = _S.instruments.filter(i => {
+      if (catFilter !== 'all' && i.category !== catFilter) return false;
+      return i.signal === _S.activeSignal;
+    });
+  }
+
+  // Sort
+  list = _sortInstruments(list, sortBy || _S.sortCol, _S.sortDir);
+  _S.sortCol = sortBy || _S.sortCol;
+
+  _S.filtered = list;
+  buildScreenerTable(_S.instruments, list);
+};
+
+function _sortInstruments(list, col, dir) {
+  const mul = dir === 'asc' ? 1 : -1;
+  const sigOrder = { 'STRONG BUY': 3, 'BUY': 2, 'NEUTRAL': 1, 'SELL': 2, 'STRONG SELL': 3 };
+  return [...list].sort((a, b) => {
+    switch(col) {
+      case 'signal':
+        const sa = _signalSortVal(a.signal);
+        const sb = _signalSortVal(b.signal);
+        return (sb - sa) * mul;
+      case 'change':
+        return (b.change - a.change) * mul;
+      case 'name':
+        return a.display.localeCompare(b.display) * mul;
+      case 'confluence':
+        return (b.confluence - a.confluence) * mul;
+      case 'rsi':
+        return ((b.rsi||50) - (a.rsi||50)) * mul;
+      case 'price':
+        return (b.price - a.price) * mul;
+      default:
+        return 0;
+    }
+  });
+}
+
+function _signalSortVal(sig) {
+  switch(sig) {
+    case 'STRONG BUY':  return  3;
+    case 'BUY':         return  2;
+    case 'NEUTRAL':     return  0;
+    case 'SELL':        return -2;
+    case 'STRONG SELL': return -3;
+    default: return 0;
+  }
+}
+
+window.sortTable = function(col) {
+  if (_S.sortCol === col) {
+    _S.sortDir = _S.sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _S.sortCol = col;
+    _S.sortDir = 'desc';
+  }
+  // Update sort icons
+  document.querySelectorAll('.sort-icon').forEach(el => el.textContent = '');
+  const icon = document.getElementById(`si-${col}`);
+  if (icon) icon.textContent = _S.sortDir === 'asc' ? ' ▲' : ' ▼';
+
+  _S.filtered = _sortInstruments(_S.filtered, col, _S.sortDir);
+  buildScreenerTable(_S.instruments, _S.filtered);
+};
+
+window.resetScreenerFilters = function() {
+  const selSig = document.getElementById('filter-signal');
+  const selCat = document.getElementById('filter-category');
+  const selSrt = document.getElementById('filter-sort');
+  if (selSig) selSig.value = 'all';
+  if (selCat) selCat.value = 'all';
+  if (selSrt) selSrt.value = 'signal';
+  _S.activeSignal = null;
+  document.querySelectorAll('.signal-toggle-btn').forEach(b => b.classList.remove('active'));
+  _S.sortCol = 'signal';
+  _S.sortDir = 'desc';
+  applyFilters();
+};
+
+window.toggleSignalFilter = function(signal) {
+  const btn = document.querySelector(`.signal-toggle-btn[data-signal="${signal}"]`);
+  if (_S.activeSignal === signal) {
+    _S.activeSignal = null;
+    if (btn) btn.classList.remove('active');
+  } else {
+    _S.activeSignal = signal;
+    document.querySelectorAll('.signal-toggle-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+  }
+  applyFilters();
+};
+
+window.screenerChangeTimeframe = function(tf) {
+  _S.currentTF = tf;
+  buildAllInstruments();
+};
+
+/* ─────────────────────────────────────────────────────
+   BUILD SCREENER TABLE
+───────────────────────────────────────────────────── */
+window.buildScreenerTable = function(all, filtered) {
+  const tbody = document.getElementById('screener-tbody');
+  if (!tbody) return;
+
+  // Update counters
+  const elShown = document.getElementById('screener-count-shown');
+  const elTotal = document.getElementById('screener-count-total');
+  if (elShown) elShown.textContent = filtered.length;
+  if (elTotal) elTotal.textContent = all.length;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted);">
+      Tidak ada instrumen yang cocok dengan filter.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(ins => _renderRow(ins)).join('');
+};
+
+function _renderRow(ins) {
+  const fmt    = window.UI ? window.UI.formatPrice : (v,d) => v.toFixed(d||2);
+  const fmtVol = window.UI ? window.UI.formatVolume : v => v;
+
+  // Symbol badge
+  const badgeClass = { crypto:'sym-badge-C', forex:'sym-badge-F', metal:'sym-badge-M' }[ins.category] || '';
+  const badgeLbl   = { crypto:'C', forex:'F', metal:'M' }[ins.category] || '';
+  const symHtml = `<strong>${ins.display}</strong><span class="sym-badge ${badgeClass}">${badgeLbl}</span>`;
+
+  // Price
+  const priceColor = ins.change >= 0 ? 'price-up' : 'price-down';
+  const priceHtml  = `<span class="price-cell ${priceColor}">${ins.price > 0 ? '$'+fmt(ins.price, ins.decimals) : '—'}</span>`;
+
+  // Change
+  const changeClass = ins.change >= 0 ? 'change-up' : 'change-down';
+  const changeArrow = ins.change >= 0 ? '▲' : '▼';
+  const changeHtml  = `<span class="${changeClass}">${changeArrow} ${Math.abs(ins.change).toFixed(2)}%</span>`;
+
+  // RSI gauge
+  const rsiVal   = ins.rsi != null ? ins.rsi.toFixed(1) : '—';
+  const rsiPct   = ins.rsi != null ? Math.min(100, Math.max(0, ins.rsi)) : 0;
+  const rsiColor = ins.rsi == null ? 'var(--text-muted)'
+                   : ins.rsi > 70  ? 'var(--accent-red)'
+                   : ins.rsi < 30  ? 'var(--accent-green)'
+                   : 'var(--accent-blue)';
+  const rsiHtml  = `<div class="rsi-wrap">
+    <span style="font-family:var(--font-mono);font-size:0.74rem;color:${rsiColor}">${rsiVal}</span>
+    <div class="rsi-bar-track"><div class="rsi-bar-fill" style="width:${rsiPct}%;background:${rsiColor}"></div></div>
+  </div>`;
+
+  // MACD
+  const macdNum   = ins.macdVal != null ? ins.macdVal.toFixed(4) : '—';
+  const macdClass = ins.macdSignal === 'BUY' ? 'macd-up' : ins.macdSignal === 'SELL' ? 'macd-down' : 'macd-flat';
+  const macdArrow = ins.macdSignal === 'BUY' ? '▲' : ins.macdSignal === 'SELL' ? '▼' : '—';
+  const macdHtml  = `<span class="${macdClass}" style="font-family:var(--font-mono);font-size:0.73rem;">${macdNum} ${macdArrow}</span>`;
+
+  // MA Signal
+  const maIcon    = ins.maSignal === 'BUY' ? '✅' : ins.maSignal === 'SELL' ? '❌' : '➖';
+  const maText    = ins.ema200 != null
+    ? `Price ${ins.price >= ins.ema200 ? '>' : '<'} MA200 ${maIcon}`
+    : `MA Signal ${maIcon}`;
+  const maHtml    = `<span style="font-size:0.72rem;color:${ins.maSignal === 'BUY' ? 'var(--accent-green)' : ins.maSignal === 'SELL' ? 'var(--accent-red)' : 'var(--text-muted)'}">${maText}</span>`;
+
+  // BB Position
+  const bbColor   = ins.bbPosition === 'Upper Band' ? 'var(--accent-red)'
+                    : ins.bbPosition === 'Lower Band' ? 'var(--accent-green)'
+                    : 'var(--text-secondary)';
+  const bbHtml    = `<span style="font-size:0.72rem;color:${bbColor}">${ins.bbPosition}</span>`;
+
+  // Volume
+  const volColor  = ins.volumeStatus === 'Above Avg' ? 'var(--accent-green)' : 'var(--text-muted)';
+  const volHtml   = `<span style="font-size:0.72rem;color:${volColor}">${ins.volumeStatus}</span>`;
+
+  // Confluence
+  const confPct   = (ins.confluence / 20) * 100;
+  const confColor = ins.confluence >= 15 ? 'var(--accent-green)'
+                    : ins.confluence >= 10 ? 'var(--accent-blue)'
+                    : ins.confluence >= 5  ? 'var(--accent-gold)'
+                    : 'var(--accent-red)';
+  const confHtml  = `<div class="confluence-wrap">
+    <span style="font-family:var(--font-mono);font-size:0.74rem;color:${confColor}">${ins.confluence}/20</span>
+    <div class="confluence-bar-track"><div class="confluence-bar-fill" style="width:${confPct}%;background:${confColor}"></div></div>
+  </div>`;
+
+  // Signal badge
+  const sigClass  = _signalBadgeClass(ins.signal);
+  const sigHtml   = `<span class="signal-badge ${sigClass}">${ins.signal}</span>`;
+
+  // Row class
+  const rowClass  = (ins.signal === 'BUY' || ins.signal === 'STRONG BUY')   ? 'row-buy'
+                    : (ins.signal === 'SELL' || ins.signal === 'STRONG SELL') ? 'row-sell' : '';
+
+  return `<tr class="${rowClass}" onclick="screenerRowClick('${ins.symbol}','${ins.category}')" title="${ins.name}">
+    <td>${symHtml}</td>
+    <td>${priceHtml}</td>
+    <td>${changeHtml}</td>
+    <td>${rsiHtml}</td>
+    <td>${macdHtml}</td>
+    <td>${maHtml}</td>
+    <td>${bbHtml}</td>
+    <td>${volHtml}</td>
+    <td>${confHtml}</td>
+    <td>${sigHtml}</td>
+  </tr>`;
+}
+
+function _signalBadgeClass(sig) {
+  switch(sig) {
+    case 'STRONG BUY':  return 'sig-strong-buy';
+    case 'BUY':         return 'sig-buy';
+    case 'NEUTRAL':     return 'sig-neutral';
+    case 'SELL':        return 'sig-sell';
+    case 'STRONG SELL': return 'sig-strong-sell';
+    default:            return 'sig-neutral';
+  }
+}
+
+/* Row click → ke chart */
+window.screenerRowClick = function(symbol, category) {
+  if (window.AppState) {
+    window.AppState.selectedInstrument = symbol;
+    window.AppState.selectedAssetClass = category;
+  }
+  if (window.loadPage) window.loadPage('chart');
+};
+
+/* ─────────────────────────────────────────────────────
+   SIGNAL COUNTS — update toggle buttons
+───────────────────────────────────────────────────── */
+function _updateSignalCounts() {
+  const counts = { 'STRONG BUY':0, 'BUY':0, 'NEUTRAL':0, 'SELL':0, 'STRONG SELL':0 };
+  _S.instruments.forEach(i => { if (counts[i.signal] != null) counts[i.signal]++; });
+  const map = { 'STRONG BUY':'cnt-sb','BUY':'cnt-b','NEUTRAL':'cnt-n','SELL':'cnt-s','STRONG SELL':'cnt-ss' };
+  Object.entries(map).forEach(([sig, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = counts[sig];
+  });
+}
+
+/* ─────────────────────────────────────────────────────
+   SUMMARY STATS
+───────────────────────────────────────────────────── */
+function updateSummaryStats() {
+  const all = _S.instruments;
+  if (!all.length) return;
+
+  const total    = all.length;
+  const bullish  = all.filter(i => i.signal === 'BUY' || i.signal === 'STRONG BUY').length;
+  const bearish  = all.filter(i => i.signal === 'SELL' || i.signal === 'STRONG SELL').length;
+  const neutral  = all.filter(i => i.signal === 'NEUTRAL').length;
+
+  // Most bullish / bearish by change%
+  const sorted     = [...all].filter(i => i.price > 0);
+  const mostBull   = sorted.reduce((a,b) => b.change > a.change ? b : a, sorted[0]);
+  const mostBear   = sorted.reduce((a,b) => b.change < a.change ? b : a, sorted[0]);
+  const topSetup   = [...all].sort((a,b) => b.confluence - a.confluence)[0];
+
+  const _set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  _set('stat-total',       total);
+  _set('stat-bullish',     `${bullish} (${Math.round(bullish/total*100)}%)`);
+  _set('stat-bearish',     `${bearish} (${Math.round(bearish/total*100)}%)`);
+  _set('stat-neutral',     `${neutral} (${Math.round(neutral/total*100)}%)`);
+  _set('stat-most-bullish', mostBull ? `${mostBull.display} +${mostBull.change.toFixed(2)}%` : '—');
+  _set('stat-most-bearish', mostBear ? `${mostBear.display} ${mostBear.change.toFixed(2)}%` : '—');
+  _set('stat-top-setup',    topSetup ? `${topSetup.display} ${topSetup.confluence}/20` : '—');
+}
+
+/* ─────────────────────────────────────────────────────
+   KOMPONEN 3: LARGE HEATMAP
+───────────────────────────────────────────────────── */
+window.buildLargeHeatmap = function() {
+  const container = document.getElementById('screener-heatmap-inner');
+  if (!container) return;
+
+  const tab = _S.hmTab;
+
+  // Filter instrumen sesuai tab
+  let list = [..._S.instruments];
+  if (tab !== 'all') {
+    list = list.filter(i => i.category === tab);
+  }
+
+  if (!list.length) {
+    container.innerHTML = `<div style="color:var(--text-muted);font-size:0.75rem;padding:20px;text-align:center;">Belum ada data.</div>`;
+    return;
+  }
+
+  // Group by category
+  const groups = { forex: [], crypto: [], metal: [] };
+  list.forEach(i => { if (groups[i.category]) groups[i.category].push(i); });
+
+  const catLabels = { forex:'Forex', crypto:'Crypto', metal:'Metal' };
+  let html = '<div class="screener-heatmap-sections">';
+
+  Object.entries(groups).forEach(([cat, items]) => {
+    if (!items.length) return;
+    if (tab !== 'all' && cat !== tab) return;
+    html += `<div>
+      <div class="heatmap-section-label">${catLabels[cat] || cat}</div>
+      <div class="large-heatmap-grid">
+        ${items.map(ins => _renderHeatmapCell(ins)).join('')}
+      </div>
+    </div>`;
+  });
+
+  html += '</div>';
+  container.innerHTML = html;
+};
+
+function _renderHeatmapCell(ins) {
+  const pct    = ins.change;
+  const isUp   = pct >= 0;
+  const absChg = Math.abs(pct);
+
+  // Warna intensitas berdasarkan change%
+  let bg;
+  if (isUp) {
+    const intensity = Math.min(absChg / 5, 1);
+    const g = Math.round(100 + intensity * 108); // 100 → 208
+    bg = `rgba(0,${g},${Math.round(80*(1-intensity))},${0.25 + intensity * 0.55})`;
+  } else {
+    const intensity = Math.min(absChg / 5, 1);
+    const r = Math.round(180 + intensity * 75);
+    bg = `rgba(${r},${Math.round(71*(1-intensity))},${Math.round(87*(1-intensity))},${0.25 + intensity * 0.55})`;
+  }
+
+  const chgStr = (isUp ? '+' : '') + pct.toFixed(2) + '%';
+  const fmt    = window.UI ? window.UI.formatPrice : (v,d) => v.toFixed(d);
+  const priceStr = ins.price > 0 ? '$' + fmt(ins.price, ins.decimals) : '—';
+
+  const sigDotClass = (ins.signal === 'BUY' || ins.signal === 'STRONG BUY') ? 'sig-buy-dot'
+                      : (ins.signal === 'SELL' || ins.signal === 'STRONG SELL') ? 'sig-sell-dot' : '';
+
+  // Tooltip data encoded in data attrs
+  const tooltipData = JSON.stringify({
+    symbol: ins.display,
+    price:  priceStr,
+    change: chgStr,
+    rsi:    ins.rsi != null ? ins.rsi.toFixed(1) : '—',
+    signal: ins.signal,
+  }).replace(/'/g, '&apos;');
+
+  return `<div class="large-heatmap-cell"
+    style="background:${bg};"
+    data-symbol="${ins.symbol}"
+    data-category="${ins.category}"
+    data-tooltip='${tooltipData}'
+    onclick="screenerRowClick('${ins.symbol}','${ins.category}')"
+    onmouseenter="_hmTooltipShow(event,this)"
+    onmouseleave="_hmTooltipHide()">
+    <div class="hm-signal-dot ${sigDotClass}"></div>
+    <div class="hm-sym">${ins.display}</div>
+    <div class="hm-price">${priceStr}</div>
+    <div class="hm-chg" style="color:${isUp ? '#00d084':'#ff4757'}">${chgStr}</div>
+  </div>`;
+}
+
+window.heatmapTab = function(tab) {
+  _S.hmTab = tab;
+  ['all','forex','crypto','metal'].forEach(t => {
+    const el = document.getElementById(`hm-tab-${t}`);
+    if (el) el.classList.toggle('active', t === tab);
+  });
+  buildLargeHeatmap();
+};
+
+/* ─── Tooltip ─── */
+let _hmTooltipEl = null;
+window._hmTooltipShow = function(event, cell) {
+  if (!_hmTooltipEl) {
+    _hmTooltipEl = document.createElement('div');
+    _hmTooltipEl.className = 'hm-tooltip';
+    _hmTooltipEl.id = 'hm-global-tooltip';
+    document.body.appendChild(_hmTooltipEl);
+  }
+  try {
+    const d = JSON.parse(cell.dataset.tooltip);
+    _hmTooltipEl.innerHTML = `
+      <div class="hm-tooltip-row"><span class="hm-tooltip-label">Symbol</span><span class="hm-tooltip-val">${d.symbol}</span></div>
+      <div class="hm-tooltip-row"><span class="hm-tooltip-label">Price</span><span class="hm-tooltip-val">${d.price}</span></div>
+      <div class="hm-tooltip-row"><span class="hm-tooltip-label">Change</span><span class="hm-tooltip-val" style="color:${d.change.startsWith('+') ? 'var(--accent-green)':'var(--accent-red)'}">${d.change}</span></div>
+      <div class="hm-tooltip-row"><span class="hm-tooltip-label">RSI</span><span class="hm-tooltip-val">${d.rsi}</span></div>
+      <div class="hm-tooltip-row"><span class="hm-tooltip-label">Signal</span><span class="hm-tooltip-val">${d.signal}</span></div>
+    `;
+  } catch(e) { return; }
+
+  _hmTooltipEl.style.left = (event.clientX + 12) + 'px';
+  _hmTooltipEl.style.top  = (event.clientY + 12) + 'px';
+  _hmTooltipEl.classList.add('visible');
+};
+
+window._hmTooltipHide = function() {
+  if (_hmTooltipEl) _hmTooltipEl.classList.remove('visible');
+};
+
+document.addEventListener('mousemove', e => {
+  if (_hmTooltipEl && _hmTooltipEl.classList.contains('visible')) {
+    _hmTooltipEl.style.left = (e.clientX + 12) + 'px';
+    _hmTooltipEl.style.top  = (e.clientY + 12) + 'px';
+  }
+});
+
+/* ─────────────────────────────────────────────────────
+   PRICE ALERT MANAGER
+───────────────────────────────────────────────────── */
+function _populateAlertSymbolSelect() {
+  const sel = document.getElementById('alert-symbol-select');
+  if (!sel) return;
+  const cfg = window.CONFIG || {};
+  const options = [];
+
+  (cfg.CRYPTO_SYMBOLS || []).forEach(c => options.push({ value: c.symbol, label: c.display + ' (Crypto)' }));
+  (cfg.FOREX_PAIRS    || []).forEach(f => options.push({ value: f.base+f.quote, label: f.pair + ' (Forex)'  }));
+  (cfg.METAL_SYMBOLS  || []).forEach(m => options.push({ value: m.symbol, label: m.display + ' (Metal)'   }));
+
+  sel.innerHTML = options.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+}
+
+window.renderAlertList = function() {
+  const alerts  = (window.AppState && window.AppState.priceAlerts) || [];
+  const tbody   = document.getElementById('alert-tbody');
+  const empty   = document.getElementById('alert-empty');
+  const table   = document.getElementById('alert-table');
+  if (!tbody) return;
+
+  if (!alerts.length) {
+    if (table)  table.style.display  = 'none';
+    if (empty)  empty.style.display  = 'flex';
+    return;
+  }
+  if (table)  table.style.display  = '';
+  if (empty)  empty.style.display  = 'none';
+
+  const prices = (window.AppState && window.AppState.prices) || {};
+  const fmt    = window.UI ? window.UI.formatPrice : (v,d) => v.toFixed(d||2);
+
+  tbody.innerHTML = alerts.map(a => {
+    const statusClass   = a.triggered ? 'alert-triggered' : '';
+    const dotClass      = (!a.triggered && a.active !== false) ? '' : 'inactive';
+    const dirLabel      = a.direction === 'above' ? `≥ ${fmt(a.price,2)}` : `≤ ${fmt(a.price,2)}`;
+    const statusText    = a.triggered ? '✅ Triggered' : (a.active === false ? '⏸ Paused' : '🔔 Active');
+    const toggleLabel   = a.active === false ? 'Aktifkan' : 'Pause';
+    return `<tr class="${statusClass}">
+      <td><span class="alert-active-dot ${dotClass}"></span>${a.symbol}</td>
+      <td style="font-family:var(--font-mono)">$${fmt(a.price,2)}</td>
+      <td>${dirLabel}</td>
+      <td>${statusText}</td>
+      <td style="display:flex;gap:4px;align-items:center;">
+        <button class="btn-secondary btn-sm" style="padding:2px 6px;font-size:0.65rem;"
+          onclick="toggleAlert('${a.id}')">${toggleLabel}</button>
+        <button class="btn-danger" style="padding:2px 6px;font-size:0.65rem;"
+          onclick="deleteAlert('${a.id}')">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+};
+
+window.openAlertModal = function(symbol) {
+  _S.alertEditId = null;
+  document.getElementById('alert-modal-title').textContent = '➕ Tambah Price Alert';
+  if (symbol) {
+    const sel = document.getElementById('alert-symbol-select');
+    if (sel) sel.value = symbol;
+  }
+  const inp = document.getElementById('alert-price-input');
+  if (inp) inp.value = '';
+  document.getElementById('alert-dir-above').checked = true;
+  const notesEl = document.getElementById('alert-notes-input');
+  if (notesEl) notesEl.value = '';
+  alertModalPreview();
+  document.getElementById('alert-modal-overlay').style.display = 'flex';
+};
+
+window.closeAlertModal = function(evt) {
+  if (evt && evt.target !== document.getElementById('alert-modal-overlay')) return;
+  document.getElementById('alert-modal-overlay').style.display = 'none';
+};
+
+window.alertModalPreview = function() {
+  const sel   = document.getElementById('alert-symbol-select');
+  const inp   = document.getElementById('alert-price-input');
+  const dir   = document.querySelector('input[name="alert-direction"]:checked')?.value || 'above';
+  const prev  = document.getElementById('alert-preview');
+  const hint  = document.getElementById('alert-current-price-hint');
+
+  if (!prev) return;
+
+  const symbol = sel ? sel.value : '—';
+  const target = parseFloat(inp?.value);
+  const fmt    = window.UI ? window.UI.formatPrice : v => v.toFixed(2);
+
+  // Current price hint
+  const prices = (window.AppState && window.AppState.prices) || {};
+  const cp     = prices[symbol];
+  if (hint && cp) hint.textContent = `(Saat ini: $${fmt(cp.price, 2)})`;
+
+  if (isNaN(target) || !symbol) {
+    prev.textContent = 'Pilih instrumen dan masukkan target harga…';
+    return;
+  }
+  const dirLabel = dir === 'above' ? 'melewati ATAS' : 'melewati BAWAH';
+  prev.innerHTML = `Alert akan dikirim saat <strong>${symbol}</strong> ${dirLabel} <strong>$${fmt(target,2)}</strong>`;
+};
+
+window.saveAlert = function() {
+  const sel   = document.getElementById('alert-symbol-select');
+  const inp   = document.getElementById('alert-price-input');
+  const dir   = document.querySelector('input[name="alert-direction"]:checked')?.value || 'above';
+  const notes = document.getElementById('alert-notes-input')?.value || '';
+
+  if (!sel || !inp) return;
+  const symbol = sel.value;
+  const price  = parseFloat(inp.value);
+
+  if (!symbol || isNaN(price) || price <= 0) {
+    if (window.UI) window.UI.showToast('Mohon isi symbol dan target price yang valid.', 'warning');
+    return;
+  }
+
+  if (window.AppState && window.AppState.addPriceAlert) {
+    const alert = window.AppState.addPriceAlert(symbol, price, dir);
+    alert.notes  = notes;
+    alert.active = true;
+    window.AppState.savePriceAlerts();
+    if (window.UI) window.UI.showToast(`Alert ${symbol} ditambahkan!`, 'success', 3000);
+  }
+
+  document.getElementById('alert-modal-overlay').style.display = 'none';
+  renderAlertList();
+};
+
+window.deleteAlert = function(id) {
+  if (window.UI) {
+    window.UI.showConfirm('Hapus alert ini?', () => {
+      if (window.AppState && window.AppState.removePriceAlert) {
+        window.AppState.removePriceAlert(id);
+      }
+      renderAlertList();
+      if (window.UI) window.UI.showToast('Alert dihapus.', 'info', 2000);
+    });
+  }
+};
+
+window.toggleAlert = function(id) {
+  const alerts = (window.AppState && window.AppState.priceAlerts) || [];
+  const alert  = alerts.find(a => a.id === id);
+  if (!alert) return;
+  alert.active = (alert.active === false) ? true : false;
+  if (window.AppState) window.AppState.savePriceAlerts();
+  renderAlertList();
+};
+
+/* ─────────────────────────────────────────────────────
+   EXPORT CSV
+───────────────────────────────────────────────────── */
+window.exportScreenerCSV = function() {
+  const data = _S.filtered.length ? _S.filtered : _S.instruments;
+  if (!data.length) { if (window.UI) window.UI.showToast('Tidak ada data untuk diekspor.','warning'); return; }
+
+  const headers = ['Symbol','Category','Price','Change%','RSI','MACD','MA Signal','BB Position','Volume','Confluence','Signal'];
+  const rows    = data.map(ins => [
+    ins.display,
+    ins.category,
+    ins.price > 0 ? ins.price.toFixed(ins.decimals) : '',
+    ins.change.toFixed(2),
+    ins.rsi != null ? ins.rsi.toFixed(1) : '',
+    ins.macdVal != null ? ins.macdVal.toFixed(6) : '',
+    ins.maSignal,
+    ins.bbPosition,
+    ins.volumeStatus,
+    ins.confluence + '/20',
+    ins.signal,
+  ]);
+
+  const csv   = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob  = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url   = URL.createObjectURL(blob);
+  const link  = document.createElement('a');
+  const now   = new Date();
+  link.href   = url;
+  link.download = `screener_${now.toISOString().slice(0,10)}_${_S.currentTF}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  if (window.UI) window.UI.showToast('CSV berhasil diekspor!', 'success', 2500);
+};
+
+/* ─────────────────────────────────────────────────────
+   AUTO-INIT saat page di-inject
+───────────────────────────────────────────────────── */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.AppInit) {
+      window.initScreenerPage();
+    } else {
+      setTimeout(window.initScreenerPage, 600);
+    }
+  });
+} else {
+  setTimeout(window.initScreenerPage, 100);
+}
+
+})(); // end IIFE
+</script>
