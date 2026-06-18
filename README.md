@@ -1,6 +1,6 @@
-# FINANCE-ADVISOR
+# FINANCE-ADVISOR CODE FLAME as JOO
 
-## 🛠 Stack Teknologi Cryptocurrency
+## 🛠 Stack Teknologi Advanced
 
 ### Blockchain & Core
 ![Web3](https://img.shields.io/badge/Web3.js-F16822?style=for-the-badge&logo=web3.js&logoColor=white)
@@ -35,9 +35,3 @@
 - Alchemy/Infura (Blockchain nodes)
 - TradingView (Charting library)
 - The Graph (Query blockchain data)
-
-## 🚀 Panduan Instalasi
-
-```bash
-# Clone repositori
-git clone https://github.com/yourrepo/crypto-invest-hub.git
